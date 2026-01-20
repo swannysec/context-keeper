@@ -1,7 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Error handling for debugging (MEDIUM-1)
+trap 'echo "session-start.sh failed at line $LINENO" >&2' ERR
+
 # Check for memory directories
+# NOTE: PROJECT_MEMORY uses relative path - this script assumes CWD is the project root.
+# Claude Code invokes hooks from the project directory, so this is the expected behavior.
+# (HIGH-3: Documented CWD assumption)
 GLOBAL_MEMORY="$HOME/.claude/memory"
 PROJECT_MEMORY=".claude/memory"
 
@@ -41,12 +47,35 @@ This provides structured context management across sessions.
 </memory-system-available>"
 fi
 
-# Output JSON
+# JSON encoding function (CRITICAL-1, HIGH-1)
+# Uses jq if available, otherwise falls back to pure-bash encoding
+json_encode() {
+    local input="$1"
+    if command -v jq &>/dev/null; then
+        # jq handles all JSON escaping correctly
+        printf '%s' "$input" | jq -Rs '.'
+    else
+        # Pure-bash fallback: escape backslashes, quotes, and control characters
+        # Then wrap in quotes and collapse whitespace
+        local escaped="$input"
+        escaped="${escaped//\\/\\\\}"      # Escape backslashes first
+        escaped="${escaped//\"/\\\"}"      # Escape double quotes
+        escaped="${escaped//$'\t'/\\t}"    # Escape tabs
+        escaped="${escaped//$'\r'/\\r}"    # Escape carriage returns
+        # Replace newlines with spaces and collapse multiple spaces
+        escaped=$(printf '%s' "$escaped" | tr '\n' ' ' | sed 's/  */ /g')
+        printf '"%s"' "$escaped"
+    fi
+}
+
+# Output JSON with properly encoded context
+encoded_context=$(json_encode "$context")
+
 cat <<EOF
 {
   "hookSpecificOutput": {
     "hookEventName": "SessionStart",
-    "additionalContext": "$(echo "$context" | sed 's/"/\\"/g' | tr '\n' ' ' | sed 's/  */ /g')"
+    "additionalContext": $encoded_context
   }
 }
 EOF

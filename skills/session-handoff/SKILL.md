@@ -24,7 +24,9 @@ Before generating handoff, ensure memory is current:
 - Update progress.md with completed/in-progress items
 - Create session summary in sessions/
 
-**Session file format:** `sessions/YYYY-MM-DD.md` or `sessions/YYYY-MM-DD-topic.md`
+**Session file format:** `sessions/YYYY-MM-DD-HHMM.md` or `sessions/YYYY-MM-DD-topic.md`
+
+> **Note:** Include timestamp (HHMM) to avoid overwriting previous same-day sessions. The topic suffix is preferred when a clear topic exists.
 
 ```markdown
 # Session: [date]

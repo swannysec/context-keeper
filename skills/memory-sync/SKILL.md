@@ -52,6 +52,8 @@ On confirmation:
 
 **ADR Numbering:** Scan `decisions/` for highest ADR-NNN, increment from there.
 
+> **Concurrency note:** If multiple sessions might create ADRs simultaneously (rare), use a timestamp suffix like `ADR-NNN-YYYYMMDD-HHMM-title.md` to avoid conflicts.
+
 **ADR Format:** (max ~500 tokens)
 ```markdown
 # ADR-NNN: [Title]
