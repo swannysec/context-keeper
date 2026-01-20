@@ -52,17 +52,6 @@ If the repository is public:
 If you discover a security vulnerability in ConKeeper:
 
 1. **Do not** open a public GitHub issue
-2. Email the maintainer directly (see repository for contact)
+2. Utilize [GitHub private vulnerability reporting](https://docs.github.com/en/code-security/how-tos/report-and-fix-vulnerabilities/report-a-vulnerability/privately-reporting-a-security-vulnerability)
 3. Include steps to reproduce the vulnerability
-4. Allow reasonable time for a fix before disclosure
-
-## Security Audit
-
-This plugin has been security audited with the following results:
-
-- **Overall Score:** 7.5/10 (GOOD)
-- **Critical/High Issues:** 0
-- **Supply Chain Risk:** None (zero external dependencies)
-- **Verdict:** Approved for production use
-
-See the repository for the full audit report.
+4. Allow reasonable time for a fix before disclosure (this is a personal project with a single maintainer)
