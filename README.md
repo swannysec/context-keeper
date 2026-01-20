@@ -15,7 +15,8 @@ ConKeeper replaces database-backed context management with simple, version-contr
 
 1. Clone or symlink this repo to `~/.claude/plugins/context-keeper`:
    ```bash
-   ln -s /path/to/context-keeper ~/.claude/plugins/context-keeper
+   # Use absolute path for reliable symlink (not relative)
+   ln -s /absolute/path/to/context-keeper ~/.claude/plugins/context-keeper
    ```
 
 2. Enable the plugin in `~/.claude/settings.json`:

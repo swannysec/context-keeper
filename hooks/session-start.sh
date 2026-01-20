@@ -23,7 +23,7 @@ context=""
 if [ "$has_global" = true ] || [ "$has_project" = true ]; then
     context="<memory-system-active>
 Memory system detected.
-- Global memory: $([ "$has_global" = true ] && echo "~/.claude/memory" || echo "not configured")
+- Global memory: $([ "$has_global" = true ] && echo "\$HOME/.claude/memory" || echo "not configured")
 - Project memory: $([ "$has_project" = true ] && echo ".claude/memory" || echo "not configured")
 
 For non-trivial tasks, load relevant memory before starting work:
