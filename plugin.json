@@ -4,6 +4,7 @@
   "description": "File-based agent memory system for persistent context across sessions",
   "author": "swannysec",
   "repository": "https://github.com/swannysec/context-keeper",
+  "license": "MIT-Commercial-Restriction",
   "skills": [
     "skills/memory-init/SKILL.md",
     "skills/memory-sync/SKILL.md",

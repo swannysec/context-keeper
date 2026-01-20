@@ -94,4 +94,6 @@ Memory files use concise conventions:
 
 ## License
 
-MIT
+MIT License with Commercial Product Restriction - See [LICENSE](LICENSE) for details.
+
+You may use this freely for personal, professional, educational, and internal business purposes. You may not incorporate it into commercial products or services sold to third parties.
