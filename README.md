@@ -108,6 +108,10 @@ Memory files use concise conventions:
 - progress.md: ~200-500 tokens
 - ADRs: ~500 tokens each
 
+## Acknowledgments
+
+ConKeeper was inspired by [ContextPortal](https://github.com/GreatScottyMac/context-portal) by [GreatScottyMac](https://github.com/GreatScottyMac). ContextPortal pioneered the concept of structured memory bank files for AI context persistence, and ConKeeper builds on those ideas with a Claude Code plugin implementation.
+
 ## License
 
 MIT License with Commercial Product Restriction - See [LICENSE](LICENSE) for details.
