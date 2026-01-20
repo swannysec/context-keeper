@@ -1,0 +1,18 @@
+{
+  "name": "context-keeper",
+  "version": "0.1.0",
+  "description": "File-based agent memory system for persistent context across sessions",
+  "author": "swannysec",
+  "repository": "https://github.com/swannysec/context-keeper",
+  "skills": [
+    "skills/memory-init/SKILL.md",
+    "skills/memory-sync/SKILL.md",
+    "skills/session-handoff/SKILL.md"
+  ],
+  "commands": [
+    "commands/memory-init.md",
+    "commands/memory-sync.md",
+    "commands/session-handoff.md"
+  ],
+  "hooks": "hooks/hooks.json"
+}
