@@ -11,11 +11,39 @@ trap 'echo "session-start.sh failed at line $LINENO" >&2' ERR
 GLOBAL_MEMORY="$HOME/.claude/memory"
 PROJECT_MEMORY=".claude/memory"
 
+# Validate directory exists and resolve symlinks safely
+# Returns 0 if valid directory, 1 otherwise
+validate_memory_dir() {
+    local dir="$1"
+    local expected_parent="$2"
+
+    # Check if path exists and is a directory (follows symlinks)
+    if [ ! -d "$dir" ]; then
+        return 1
+    fi
+
+    # If it's a symlink, resolve and validate the target
+    if [ -L "$dir" ]; then
+        local resolved
+        # Use readlink -f if available, otherwise basic check
+        if command -v readlink &>/dev/null; then
+            resolved=$(readlink -f "$dir" 2>/dev/null) || return 1
+            # Ensure resolved path is under expected parent (prevent symlink escape)
+            case "$resolved" in
+                "$expected_parent"*) return 0 ;;
+                *) return 1 ;;  # Symlink points outside expected location
+            esac
+        fi
+    fi
+
+    return 0
+}
+
 has_global=false
 has_project=false
 
-[ -d "$GLOBAL_MEMORY" ] && has_global=true
-[ -d "$PROJECT_MEMORY" ] && has_project=true
+validate_memory_dir "$GLOBAL_MEMORY" "$HOME" && has_global=true
+validate_memory_dir "$PROJECT_MEMORY" "$PWD" && has_project=true
 
 # Build context message
 context=""
@@ -56,14 +84,13 @@ json_encode() {
         printf '%s' "$input" | jq -Rs '.'
     else
         # Pure-bash fallback: escape backslashes, quotes, and control characters
-        # Then wrap in quotes and collapse whitespace
+        # Preserves newlines as \n escape sequences for proper JSON
         local escaped="$input"
         escaped="${escaped//\\/\\\\}"      # Escape backslashes first
         escaped="${escaped//\"/\\\"}"      # Escape double quotes
         escaped="${escaped//$'\t'/\\t}"    # Escape tabs
         escaped="${escaped//$'\r'/\\r}"    # Escape carriage returns
-        # Replace newlines with spaces and collapse multiple spaces
-        escaped=$(printf '%s' "$escaped" | tr '\n' ' ' | sed 's/  */ /g')
+        escaped="${escaped//$'\n'/\\n}"    # Escape newlines as \n
         printf '"%s"' "$escaped"
     fi
 }
