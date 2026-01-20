@@ -13,6 +13,23 @@ ConKeeper replaces database-backed context management with simple, version-contr
 
 ## Installation
 
+### Option 1: Marketplace (Recommended)
+
+Add the marketplace and install the plugin:
+
+```bash
+# Add the marketplace
+/plugin marketplace add swannysec/context-keeper
+
+# Install the plugin
+/plugin install context-keeper@swannysec-plugins
+
+# Create global memory directory
+mkdir -p ~/.claude/memory
+```
+
+### Option 2: Manual Installation
+
 1. Clone or symlink this repo to `~/.claude/plugins/context-keeper`:
    ```bash
    # Use absolute path for reliable symlink (not relative)
@@ -22,10 +39,8 @@ ConKeeper replaces database-backed context management with simple, version-contr
 2. Enable the plugin in `~/.claude/settings.json`:
    ```json
    {
-     "plugins": {
-       "context-keeper": {
-         "enabled": true
-       }
+     "enabledPlugins": {
+       "context-keeper": true
      }
    }
    ```
