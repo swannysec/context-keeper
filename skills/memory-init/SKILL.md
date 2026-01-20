@@ -129,9 +129,9 @@ Ask user:
 > - Yes: Memory persists with repo (recommended for solo projects)
 > - No: Add to .gitignore (recommended for shared repos)
 
-If no, add to .gitignore:
+If no, add to .gitignore (idempotent - won't duplicate if already present):
 ```bash
-echo ".claude/memory/" >> .gitignore
+grep -qxF '.claude/memory/' .gitignore 2>/dev/null || echo '.claude/memory/' >> .gitignore
 ```
 
 ### Step 5: Confirm

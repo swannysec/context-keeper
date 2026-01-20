@@ -1,0 +1,25 @@
+MIT License with Commercial Product Restriction
+
+Copyright (c) 2025 John D. Swanson
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+1. The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+2. COMMERCIAL PRODUCT RESTRICTION: You may not incorporate this Software, in whole or in substantial part, into a Commercial Product. A "Commercial Product" means any product or service offered to third parties for a fee or other commercial consideration whose value derives, entirely or substantially, from the functionality of the Software.
+
+   This restriction does NOT prohibit:
+   - Personal use of the Software
+   - Use by individuals in their professional work (e.g., consultants, freelancers, employees using the Software as a tool)
+   - Use by businesses for internal purposes
+   - Use by educational institutions, nonprofits, or government entities
+   - Distribution of the Software itself (with this license)
+   - Creating and distributing modifications (with this license)
+
+   This restriction DOES prohibit:
+   - Selling the Software as a standalone product
+   - Offering the Software as a hosted service (SaaS) for commercial gain
+   - Incorporating the Software into a product sold to customers
+   - White-labeling or rebranding the Software for sale
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.

@@ -13,18 +13,34 @@ ConKeeper replaces database-backed context management with simple, version-contr
 
 ## Installation
 
+### Option 1: Marketplace (Recommended)
+
+Add the marketplace and install the plugin:
+
+```bash
+# Add the marketplace
+/plugin marketplace add swannysec/context-keeper
+
+# Install the plugin
+/plugin install context-keeper@swannysec-plugins
+
+# Create global memory directory
+mkdir -p ~/.claude/memory
+```
+
+### Option 2: Manual Installation
+
 1. Clone or symlink this repo to `~/.claude/plugins/context-keeper`:
    ```bash
-   ln -s /path/to/context-keeper ~/.claude/plugins/context-keeper
+   # Use absolute path for reliable symlink (not relative)
+   ln -s /absolute/path/to/context-keeper ~/.claude/plugins/context-keeper
    ```
 
 2. Enable the plugin in `~/.claude/settings.json`:
    ```json
    {
-     "plugins": {
-       "context-keeper": {
-         "enabled": true
-       }
+     "enabledPlugins": {
+       "context-keeper": true
      }
    }
    ```
@@ -92,6 +108,12 @@ Memory files use concise conventions:
 - progress.md: ~200-500 tokens
 - ADRs: ~500 tokens each
 
+## Acknowledgments
+
+ConKeeper was inspired by [ContextPortal](https://github.com/GreatScottyMac/context-portal) by [GreatScottyMac](https://github.com/GreatScottyMac). ContextPortal pioneered the concept of structured memory bank files for AI context persistence, and ConKeeper builds on those ideas with a Claude Code plugin implementation.
+
 ## License
 
-MIT
+MIT License with Commercial Product Restriction - See [LICENSE](LICENSE) for details.
+
+You may use this freely for personal, professional, educational, and internal business purposes. You may not incorporate it into commercial products or services sold to third parties.

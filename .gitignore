@@ -1,4 +1,25 @@
+# OS files
 .DS_Store
+Thumbs.db
+
+# Editor files
 *.swp
 *.swo
 *~
+.idea/
+.vscode/
+*.sublime-*
+
+# Local Claude settings (user-specific)
+.claude/settings.local.json
+.claude/memory/
+
+# Development artifacts
+PLAN.md
+TEST-PROMPT.md
+
+# Node (if testing)
+node_modules/
+
+# Logs
+*.log

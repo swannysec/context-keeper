@@ -1,15 +1,49 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Error handling for debugging (MEDIUM-1)
+trap 'echo "session-start.sh failed at line $LINENO" >&2' ERR
+
 # Check for memory directories
+# NOTE: PROJECT_MEMORY uses relative path - this script assumes CWD is the project root.
+# Claude Code invokes hooks from the project directory, so this is the expected behavior.
+# (HIGH-3: Documented CWD assumption)
 GLOBAL_MEMORY="$HOME/.claude/memory"
 PROJECT_MEMORY=".claude/memory"
+
+# Validate directory exists and resolve symlinks safely
+# Returns 0 if valid directory, 1 otherwise
+validate_memory_dir() {
+    local dir="$1"
+    local expected_parent="$2"
+
+    # Check if path exists and is a directory (follows symlinks)
+    if [ ! -d "$dir" ]; then
+        return 1
+    fi
+
+    # If it's a symlink, resolve and validate the target
+    if [ -L "$dir" ]; then
+        local resolved
+        # Use readlink -f if available, otherwise basic check
+        if command -v readlink &>/dev/null; then
+            resolved=$(readlink -f "$dir" 2>/dev/null) || return 1
+            # Ensure resolved path is under expected parent (prevent symlink escape)
+            case "$resolved" in
+                "$expected_parent"*) return 0 ;;
+                *) return 1 ;;  # Symlink points outside expected location
+            esac
+        fi
+    fi
+
+    return 0
+}
 
 has_global=false
 has_project=false
 
-[ -d "$GLOBAL_MEMORY" ] && has_global=true
-[ -d "$PROJECT_MEMORY" ] && has_project=true
+validate_memory_dir "$GLOBAL_MEMORY" "$HOME" && has_global=true
+validate_memory_dir "$PROJECT_MEMORY" "$PWD" && has_project=true
 
 # Build context message
 context=""
@@ -17,7 +51,7 @@ context=""
 if [ "$has_global" = true ] || [ "$has_project" = true ]; then
     context="<memory-system-active>
 Memory system detected.
-- Global memory: $([ "$has_global" = true ] && echo "~/.claude/memory" || echo "not configured")
+- Global memory: $([ "$has_global" = true ] && echo "\$HOME/.claude/memory" || echo "not configured")
 - Project memory: $([ "$has_project" = true ] && echo ".claude/memory" || echo "not configured")
 
 For non-trivial tasks, load relevant memory before starting work:
@@ -41,12 +75,34 @@ This provides structured context management across sessions.
 </memory-system-available>"
 fi
 
-# Output JSON
+# JSON encoding function (CRITICAL-1, HIGH-1)
+# Uses jq if available, otherwise falls back to pure-bash encoding
+json_encode() {
+    local input="$1"
+    if command -v jq &>/dev/null; then
+        # jq handles all JSON escaping correctly
+        printf '%s' "$input" | jq -Rs '.'
+    else
+        # Pure-bash fallback: escape backslashes, quotes, and control characters
+        # Preserves newlines as \n escape sequences for proper JSON
+        local escaped="$input"
+        escaped="${escaped//\\/\\\\}"      # Escape backslashes first
+        escaped="${escaped//\"/\\\"}"      # Escape double quotes
+        escaped="${escaped//$'\t'/\\t}"    # Escape tabs
+        escaped="${escaped//$'\r'/\\r}"    # Escape carriage returns
+        escaped="${escaped//$'\n'/\\n}"    # Escape newlines as \n
+        printf '"%s"' "$escaped"
+    fi
+}
+
+# Output JSON with properly encoded context
+encoded_context=$(json_encode "$context")
+
 cat <<EOF
 {
   "hookSpecificOutput": {
     "hookEventName": "SessionStart",
-    "additionalContext": "$(echo "$context" | sed 's/"/\\"/g' | tr '\n' ' ' | sed 's/  */ /g')"
+    "additionalContext": $encoded_context
   }
 }
 EOF
