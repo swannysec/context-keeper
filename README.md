@@ -61,7 +61,7 @@ ConKeeper supports multiple AI coding platforms through native skills and AGENTS
 | Platform | Support Type | Status |
 |----------|--------------|--------|
 | **Claude Code** | Native Plugin | ✅ Fully Tested |
-| **GitHub Copilot** | Native Skills | ⚠️ Documented |
+| **GitHub Copilot in VSCode** | Native Skills | ✅ Verified |
 | **OpenAI Codex** | Native Skills | ⚠️ Documented |
 | **Cursor** | Native Skills (Nightly) | ⚠️ Documented |
 | **Windsurf** | .windsurfrules | ⚠️ Documented |
