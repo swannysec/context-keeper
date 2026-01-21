@@ -128,7 +128,25 @@ Ask user (or infer from codebase):
 *Last updated: [date]*
 ```
 
-### Step 4: Git Handling
+### Step 4: Configure Token Budget
+
+Ask user:
+> What token budget preset would you like?
+> 1. **Economy** (~2000 tokens): Minimal context, fast loading
+> 2. **Light** (~3000 tokens): Smaller projects, lighter footprint
+> 3. **Standard** (~4000 tokens): Balanced for most projects (default)
+> 4. **Detailed** (~6000 tokens): Comprehensive context, rich handoffs
+
+Create `.claude/memory/.memory-config.md` with their choice:
+```yaml
+---
+token_budget: standard
+---
+```
+
+If user accepts default (Standard), this file can be omitted.
+
+### Step 5: Git Handling
 
 Ask user:
 > Should `.claude/memory/` be tracked in git?
@@ -140,12 +158,13 @@ If no:
 grep -qxF '.claude/memory/' .gitignore 2>/dev/null || echo '.claude/memory/' >> .gitignore
 ```
 
-### Step 5: Confirm
+### Step 6: Confirm
 
 Output summary:
 > Memory initialized for [project-name]
 > - Product context: [summary]
 > - Current focus: [focus]
+> - Token budget: [economy/light/standard/detailed]
 > - Git tracking: [yes/no]
 >
 > Use memory-sync to update memory as you work.

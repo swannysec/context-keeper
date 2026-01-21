@@ -20,11 +20,13 @@
   "skills": [
     "skills/memory-init/SKILL.md",
     "skills/memory-sync/SKILL.md",
+    "skills/memory-config/SKILL.md",
     "skills/session-handoff/SKILL.md"
   ],
   "commands": [
     "commands/memory-init.md",
     "commands/memory-sync.md",
+    "commands/memory-config.md",
     "commands/session-handoff.md"
   ],
   "hooks": "hooks/hooks.json"

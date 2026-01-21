@@ -54,7 +54,25 @@ Create these files using templates from `core/memory/templates/`:
 4. **patterns.md** - Document any detected code patterns (can be empty)
 5. **glossary.md** - Note any project-specific terms discovered (can be empty)
 
-### 5. Configure Git Tracking
+### 5. Configure Token Budget
+
+Ask user about memory verbosity preference:
+> "What token budget preset would you like?"
+> - **Economy** (~2000 tokens): Minimal context, fast loading
+> - **Light** (~3000 tokens): Smaller projects, lighter footprint
+> - **Standard** (~4000 tokens): Balanced for most projects (default)
+> - **Detailed** (~6000 tokens): Comprehensive context, rich handoffs
+
+Create `.claude/memory/.memory-config.md` with their choice:
+```yaml
+---
+token_budget: standard
+---
+```
+
+If user accepts the default, this step can be skipped (standard is assumed).
+
+### 6. Configure Git Tracking
 
 Ask user about version control preference:
 > "Should memory be tracked in git?"
@@ -67,16 +85,18 @@ If not tracking:
 grep -qxF '.claude/memory/' .gitignore 2>/dev/null || echo '.claude/memory/' >> .gitignore
 ```
 
-### 6. Confirm Completion
+### 7. Confirm Completion
 
 Output summary:
 ```
 Memory initialized for [project-name]
 - Product context: [brief summary]
 - Current focus: [current focus]
+- Token budget: [economy/light/standard/detailed]
 - Git tracking: [yes/no]
 
 Use memory-sync workflow to update memory as you work.
+Use /memory-config to adjust settings later.
 ```
 
 ## Error Handling
