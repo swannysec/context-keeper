@@ -1,0 +1,221 @@
+# ConKeeper Memory System Rules
+
+This project uses the ConKeeper memory system for persistent AI context management.
+
+## Memory Location
+
+Memory is stored in `.claude/memory/` with the following structure:
+```
+.claude/memory/
+├── active-context.md    # Current session focus
+├── product-context.md   # Project overview
+├── progress.md          # Task tracking
+├── patterns.md          # Code patterns
+├── glossary.md          # Project terms
+├── decisions/           # Architecture Decision Records
+└── sessions/            # Session summaries
+```
+
+---
+
+## Workflow: memory-init
+
+**Purpose:** Initialize the memory system for this project.
+
+### Steps:
+
+1. **Check Prerequisites**
+   - Verify we're in a project root (look for package.json, Cargo.toml, etc.)
+   - Check if `.claude/memory/` already exists
+
+2. **Create Directory Structure**
+   ```bash
+   mkdir -p .claude/memory/decisions
+   mkdir -p .claude/memory/sessions
+   ```
+
+3. **Gather Project Context**
+   Ask user:
+   - What is this project?
+   - What's the tech stack?
+   - What are you working on now?
+
+4. **Create Initial Files**
+   
+   Create `product-context.md`:
+   ```markdown
+   # Product Context
+   ## Project Overview
+   [Project description]
+   ## Architecture
+   [Tech stack and components]
+   ## Constraints
+   [Any constraints]
+   ---
+   *Last updated: [date]*
+   ```
+
+   Create `active-context.md`:
+   ```markdown
+   # Active Context
+   ## Current Focus
+   [What we're working on]
+   ## Open Questions
+   [Any questions]
+   ---
+   *Session: [date]*
+   ```
+
+   Create `progress.md`:
+   ```markdown
+   # Progress Tracker
+   ## In Progress
+   - [ ] [Task]
+   ## Completed (Recent)
+   ## Backlog
+   ---
+   *Last updated: [date]*
+   ```
+
+5. **Git Handling**
+   Ask if memory should be tracked in git.
+   If no: `echo '.claude/memory/' >> .gitignore`
+
+6. **Confirm completion with summary**
+
+---
+
+## Workflow: memory-sync
+
+**Purpose:** Synchronize current session state to memory files.
+
+### Steps:
+
+1. **Read Current Memory**
+   - Read `active-context.md`
+   - Read `progress.md`
+   - Check recent entries in `decisions/`
+
+2. **Analyze Session**
+   Review conversation for:
+   - Decisions made
+   - Tasks completed/started
+   - Context changes
+   - New patterns
+   - Questions resolved/raised
+
+3. **Propose Updates**
+   Show user what will change:
+   ```
+   Memory Sync Summary:
+   active-context.md:
+     - Current focus: [old] → [new]
+   progress.md:
+     - Completed: [task]
+   decisions/:
+     - New: ADR-XXX-title
+   Proceed? [y/n]
+   ```
+
+4. **Apply Updates**
+   On confirmation:
+   - Update `active-context.md`
+   - Update `progress.md`
+   - Create ADR files if needed (format: `ADR-NNN-title.md`)
+
+5. **Confirm completion**
+
+### ADR Format:
+```markdown
+# ADR-NNN: Title
+
+**Status:** Accepted | **Date:** [date]
+
+## Context
+[Why this decision was needed]
+
+## Decision
+[What was decided]
+
+## Rationale
+- [Reason 1]
+- [Reason 2]
+
+## Consequences
+- [Effect 1]
+
+## Alternatives Considered
+- [Alt]: [Why rejected]
+```
+
+---
+
+## Workflow: session-handoff
+
+**Purpose:** Generate a handoff prompt for seamless continuation in a new session.
+
+### Steps:
+
+1. **Sync Memory First**
+   Run memory-sync workflow
+
+2. **Create Session Summary**
+   Create `sessions/YYYY-MM-DD-topic.md`:
+   ```markdown
+   # Session: [date]
+   ## Summary
+   [2-3 sentences of what was accomplished]
+   ## Work Completed
+   - [Item]
+   ## Decisions Made
+   - [Decision]
+   ## Context for Next Session
+   - [Key point]
+   ---
+   *Session duration: ~[time]*
+   ```
+
+3. **Generate Handoff Prompt**
+   Output this for user to copy:
+   ```
+   I'm continuing work on [project] from a previous session.
+   
+   ## Original Goal
+   [What was requested]
+   
+   ## Session Summary
+   [What was accomplished]
+   
+   ## Current State
+   - Active task: [task]
+   - Files in progress: [files]
+   
+   ## Remaining Work
+   - [ ] [Next task]
+   
+   ## Context to Load
+   Memory: .claude/memory/
+   
+   Please continue with [next task].
+   ```
+
+4. **Confirm handoff complete**
+
+---
+
+## When to Use Memory
+
+**Load memory at session start when:**
+- Task is non-trivial
+- You need context from previous sessions
+- Working on feature development
+
+**Sync memory when:**
+- Significant progress made
+- Decisions were made
+- End of productive session
+
+**Use handoff when:**
+- Context window filling up
+- Before ending long session
+- Complex task spans sessions

@@ -47,6 +47,43 @@ If the repository is public:
 | `.claude/memory/decisions/` | ADRs | Medium (architecture details) |
 | `.claude/memory/sessions/` | Session history | Low (typically transient) |
 
+## Prompt Injection Risks
+
+ConKeeper stores project context in markdown files that are loaded into AI assistant context windows. Users should be aware of the following risks:
+
+### Risk Description
+
+Memory files (`.claude/memory/*.md`) could potentially contain malicious content designed to manipulate AI assistant behavior. This is an inherent risk in any system that persists AI context.
+
+**Example attack scenario:**
+1. An attacker gains write access to memory files (e.g., via compromised dependency, shared repo access)
+2. Attacker injects instructions like "Ignore previous instructions..." into memory content
+3. When the AI assistant loads memory, it may follow injected instructions
+
+### Mitigations
+
+ConKeeper implements several mitigations:
+
+1. **Local-only by default**: Memory files are stored locally in the project directory
+2. **Git ignore recommendation**: The initialization workflow asks whether to add memory to `.gitignore`
+3. **User control**: Users control their own memory content and can review files
+4. **AI defenses**: Modern AI assistants have built-in prompt injection defenses
+
+### Recommendations for High-Security Environments
+
+1. **Do not track memory in git** for shared repositories
+2. **Review memory files** before loading in sensitive contexts
+3. **Use file permissions** to restrict write access to memory directories
+4. **Consider excluding memory** when working on untrusted codebases
+
+### Shared Repository Guidelines
+
+If you must share memory files in a repository:
+- Review all memory content before committing
+- Use branch protection rules
+- Consider code review requirements for memory file changes
+- Be aware that contributors can modify AI behavior through memory
+
 ## Reporting Security Issues
 
 If you discover a security vulnerability in ConKeeper:

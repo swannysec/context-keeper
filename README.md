@@ -1,6 +1,8 @@
 # ConKeeper (context-keeper)
 
-A file-based agent memory system plugin for Claude Code that provides structured context management using plain Markdown files.
+A file-based agent memory system for AI coding assistants that provides structured context management using plain Markdown files.
+
+**Multi-Platform Support:** ConKeeper works with Claude Code, GitHub Copilot, OpenAI Codex, Cursor, Windsurf, and Zed.
 
 ## Overview
 
@@ -50,6 +52,71 @@ mkdir -p ~/.claude/memory
    mkdir -p ~/.claude/memory
    ```
 
+## Multi-Platform Support
+
+ConKeeper supports multiple AI coding platforms through native skills and AGENTS.md awareness.
+
+### Platform Support Matrix
+
+| Platform | Support Type | Status |
+|----------|--------------|--------|
+| **Claude Code** | Native Plugin | ✅ Fully Tested |
+| **GitHub Copilot** | Native Skills | ⚠️ Documented |
+| **OpenAI Codex** | Native Skills | ⚠️ Documented |
+| **Cursor** | Native Skills (Nightly) | ⚠️ Documented |
+| **Windsurf** | .windsurfrules | ⚠️ Documented |
+| **Zed** | AGENTS.md + Rules | ✅ Verified |
+
+### Quick Setup (Any Platform)
+
+Add this snippet to your project's AGENTS.md:
+
+```markdown
+<!-- ConKeeper Memory System -->
+## Memory System
+
+This project uses ConKeeper for persistent AI context management.
+
+**Memory Location:** `.claude/memory/` (or `.ai/memory/`)
+
+**Available Workflows:**
+- **memory-init** - Initialize memory for this project
+- **memory-sync** - Sync session state to memory files
+- **session-handoff** - Generate handoff for new session
+
+**Memory Files:**
+- `active-context.md` - Current focus and state
+- `product-context.md` - Project overview
+- `progress.md` - Task tracking
+- `decisions/` - Architecture Decision Records
+- `sessions/` - Session summaries
+
+**Usage:**
+- Load memory at session start for non-trivial tasks
+- Sync memory after significant progress
+- Use handoff when context window fills
+
+For full documentation: https://github.com/swannysec/context-keeper
+<!-- /ConKeeper -->
+```
+
+### Interactive Installer
+
+```bash
+# Run from your project directory
+/path/to/context-keeper/tools/install.sh
+```
+
+### Platform-Specific Setup
+
+See [docs/platform-guides/](docs/platform-guides/) for detailed platform instructions:
+- [Claude Code](docs/platform-guides/claude-code.md)
+- [GitHub Copilot](docs/platform-guides/copilot.md)
+- [OpenAI Codex](docs/platform-guides/codex.md)
+- [Cursor](docs/platform-guides/cursor.md)
+- [Windsurf](docs/platform-guides/windsurf.md)
+- [Zed](docs/platform-guides/zed.md)
+
 ## Usage
 
 ### Commands
@@ -92,6 +159,15 @@ mkdir -p ~/.claude/memory
 - **Graceful degradation** - Works without hooks via CLAUDE.md instructions
 - **User control** - Memory suggestions can be disabled per-project
 - **Simple over complex** - Standard filesystem; no special tooling
+
+## Security Considerations
+
+Memory files may contain project context that influences AI assistant behavior. For security guidance, see [SECURITY.md](SECURITY.md).
+
+Key recommendations:
+- Add `.claude/memory/` to `.gitignore` for shared repositories
+- Review memory files when working on untrusted codebases
+- See SECURITY.md for prompt injection awareness
 
 ## Token Efficiency
 

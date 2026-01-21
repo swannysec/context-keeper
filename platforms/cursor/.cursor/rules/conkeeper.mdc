@@ -1,0 +1,27 @@
+---
+description: ConKeeper memory system for persistent AI context
+alwaysApply: false
+---
+
+# ConKeeper Memory System
+
+When working on non-trivial tasks, use the ConKeeper memory system.
+
+## Memory Location
+`.claude/memory/`
+
+## Available Workflows
+
+### memory-init
+Initialize memory: create `.claude/memory/` with product-context.md, active-context.md, progress.md, patterns.md, glossary.md, decisions/, sessions/
+
+### memory-sync
+Sync session: update active-context.md, progress.md, create ADRs for significant decisions
+
+### session-handoff
+Generate handoff prompt for seamless continuation in new session
+
+## Usage
+- Load memory at session start for non-trivial tasks
+- Sync memory after significant progress
+- Use handoff when context window fills
