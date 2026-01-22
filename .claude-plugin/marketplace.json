@@ -12,8 +12,8 @@
     {
       "name": "context-keeper",
       "source": {
-        "source": "github",
-        "repo": "swannysec/context-keeper"
+        "source": "url",
+        "url": "https://github.com/swannysec/context-keeper.git"
       },
       "description": "File-based agent memory system for persistent context across sessions. Provides structured context management using plain Markdown files for global and project-specific memory.",
       "version": "0.3.1",
