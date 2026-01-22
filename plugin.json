@@ -1,6 +1,6 @@
 {
   "name": "context-keeper",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "File-based agent memory system for persistent context across sessions",
   "author": {
     "name": "swannysec",
