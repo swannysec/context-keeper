@@ -11,9 +11,9 @@
   "plugins": [
     {
       "name": "context-keeper",
-      "source": ".",
+      "source": "github:swannysec/context-keeper",
       "description": "File-based agent memory system for persistent context across sessions. Provides structured context management using plain Markdown files for global and project-specific memory.",
-      "version": "0.1.0",
+      "version": "0.3.1",
       "author": {
         "name": "swannysec"
       },
