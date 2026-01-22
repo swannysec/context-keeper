@@ -20,8 +20,8 @@ ConKeeper replaces database-backed context management with simple, version-contr
 Add the marketplace and install the plugin:
 
 ```bash
-# Add the marketplace
-/plugin marketplace add swannysec/context-keeper
+# Add the marketplace (use full HTTPS URL to avoid SSH auth issues)
+/plugin marketplace add https://github.com/swannysec/context-keeper.git
 
 # Install the plugin
 /plugin install context-keeper@swannysec-plugins
@@ -29,6 +29,8 @@ Add the marketplace and install the plugin:
 # Create global memory directory
 mkdir -p ~/.claude/memory
 ```
+
+> **Note:** Using the full HTTPS URL avoids [SSH authentication issues](https://github.com/anthropics/claude-code/issues/14485) with the `github` source type.
 
 ### Option 2: Manual Installation
 
@@ -71,7 +73,7 @@ ConKeeper supports multiple AI coding platforms through native skills and AGENTS
 
 Add this snippet to your project's AGENTS.md:
 
-```markdown
+```text
 <!-- ConKeeper Memory System -->
 ## Memory System
 
