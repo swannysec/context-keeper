@@ -42,7 +42,7 @@ Check for `.claude/memory/.memory-config.md`:
 ### Step 2: Display Current Settings
 
 > **Current ConKeeper Configuration**
-> - Token budget: [compact/standard/detailed] (default: standard)
+> - Token budget: [economy/light/standard/detailed] (default: standard)
 > - Suggest memories: [true/false] (default: true)
 > - Auto load: [true/false] (default: true)
 > - Output style: [quiet/normal/explanatory] (default: normal)
