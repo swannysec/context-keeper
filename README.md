@@ -73,7 +73,7 @@ ConKeeper supports multiple AI coding platforms through native skills and AGENTS
 
 Add this snippet to your project's AGENTS.md:
 
-```markdown
+```text
 <!-- ConKeeper Memory System -->
 ## Memory System
 
