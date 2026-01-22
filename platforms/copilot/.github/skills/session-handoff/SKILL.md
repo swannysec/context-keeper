@@ -16,6 +16,16 @@ Generate a complete handoff package for seamless session continuation.
 
 ## Handoff Process
 
+### Step 0: Check Token Budget
+
+Read `.claude/memory/.memory-config.md` for token budget (if exists):
+- `economy`: Session summary ~200-400 tokens (brief, 2-3 sentences)
+- `light`: Session summary ~400-700 tokens (concise, 3-5 sentences)
+- `standard`: Session summary ~600-1000 tokens (default, 5-8 sentences)
+- `detailed`: Session summary ~900-1500 tokens (comprehensive, 8-12 sentences)
+
+If no config exists, use `standard` budget.
+
 ### Step 1: Sync Memory First
 
 Before generating handoff:
@@ -32,7 +42,11 @@ Before generating handoff:
 # Session: [date]
 
 ## Summary
-Brief 2-3 sentence summary.
+Brief summary of what was accomplished.
+- economy: 2-3 sentences
+- light: 3-5 sentences
+- standard: 5-8 sentences (default)
+- detailed: 8-12 sentences with comprehensive context
 
 ## Work Completed
 - [Item 1]

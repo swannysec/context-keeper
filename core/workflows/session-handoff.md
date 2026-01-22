@@ -11,6 +11,16 @@
 
 ## Workflow Steps
 
+### 0. Check Token Budget
+
+Read `.claude/memory/.memory-config.md` for token budget (if exists):
+- `economy`: Session summary ~200-400 tokens (brief, 2-3 sentences)
+- `light`: Session summary ~400-700 tokens (concise, 3-5 sentences)
+- `standard`: Session summary ~600-1000 tokens (default, 5-8 sentences)
+- `detailed`: Session summary ~900-1500 tokens (comprehensive, 8-12 sentences)
+
+If no config exists, use `standard` budget.
+
 ### 1. Sync Memory First
 
 Before generating handoff, ensure memory is current:
@@ -23,11 +33,17 @@ Before generating handoff, ensure memory is current:
 
 Create file: `sessions/YYYY-MM-DD-topic.md` or `sessions/YYYY-MM-DD-HHMM.md`
 
+Adjust detail level based on token budget:
+
 ```markdown
 # Session: YYYY-MM-DD
 
 ## Summary
-Brief 2-3 sentence summary of what was accomplished.
+Brief summary of what was accomplished.
+- economy: 2-3 sentences
+- light: 3-5 sentences
+- standard: 5-8 sentences (default)
+- detailed: 8-12 sentences with comprehensive context
 
 ## Work Completed
 - Item 1

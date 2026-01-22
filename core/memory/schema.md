@@ -247,23 +247,38 @@ Brief 2-3 sentence summary of what was accomplished.
 suggest_memories: true    # Whether to suggest memory additions
 auto_load: true           # Whether to auto-load memory at session start
 output_style: explanatory # Output verbosity (quiet, normal, explanatory)
+token_budget: standard    # Token budget preset: compact, standard, or detailed
 ---
 ```
 
 This file is optional. If not present, defaults are used.
 
+### Token Budget Presets
+
+| Preset | Total Target | Best For |
+|--------|--------------|----------|
+| `economy` | ~2000 tokens | Quick tasks, minimal context |
+| `light` | ~3000 tokens | Small projects, faster loading |
+| `standard` | ~4000 tokens | Most projects (default) |
+| `detailed` | ~6000 tokens | Complex projects, comprehensive handoffs |
+
+**Per-file limits by preset:**
+
+| File | economy | light | standard | detailed |
+|------|---------|-------|----------|----------|
+| active-context.md | 200-400 | 300-500 | 400-600 | 500-800 |
+| product-context.md | 300-600 | 400-700 | 500-900 | 700-1200 |
+| progress.md | 200-400 | 250-450 | 350-550 | 450-700 |
+| patterns.md | 200-400 | 250-450 | 350-550 | 450-700 |
+| glossary.md | 100-300 | 150-350 | 200-450 | 300-500 |
+| Individual ADR | 300-500 | 400-600 | 500-800 | 700-1000 |
+| Session summary | 200-400 | 400-700 | 600-1000 | 900-1500 |
+
 ## Token Budget Guidelines
 
-Memory files should be concise to fit within context windows:
-- `active-context.md`: ~200-400 tokens
-- `product-context.md`: ~300-600 tokens
-- `progress.md`: ~200-400 tokens
-- `patterns.md`: ~200-400 tokens
-- `glossary.md`: ~100-300 tokens
-- Individual ADR: ~300-500 tokens
-- Session summary: ~200-400 tokens
+Memory files should be concise to fit within context windows. The default preset is `standard` (~4000 tokens total). See **Token Budget Presets** above for per-file limits.
 
-Total memory load should target under 2000 tokens for full context injection.
+Projects can customize via `.memory-config.md` or during `memory-init`.
 
 ## Security Considerations
 
