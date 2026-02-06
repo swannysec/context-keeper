@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **License** changed from MIT with Commercial Product Restriction to Apache 2.0 with Commons Clause
 - `hooks.json` now registers `UserPromptSubmit` and `PreCompact` hooks alongside `SessionStart`
 - Memory-sync skill and workflow documentation updated with auto-sync mode
 - Memory-config skill updated with context preservation settings

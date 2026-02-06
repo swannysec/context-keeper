@@ -8,7 +8,7 @@
   },
   "repository": "https://github.com/swannysec/context-keeper",
   "homepage": "https://github.com/swannysec/context-keeper#readme",
-  "license": "MIT-Commercial-Restriction",
+  "license": "Apache-2.0 WITH Commons-Clause-1.0",
   "keywords": [
     "memory",
     "context",

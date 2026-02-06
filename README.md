@@ -11,6 +11,7 @@ ConKeeper replaces database-backed context management with simple, version-contr
 - **Global memory** (`~/.claude/memory/`) - Cross-project preferences and patterns
 - **Project memory** (`<project>/.claude/memory/`) - Project-specific context, decisions, and progress
 - **SessionStart hook** - Automatic memory awareness at session start
+- **Context preservation hooks** - Automatic memory-sync before context compaction
 - **Skills + commands** - Easy memory initialization, sync, and session handoff
 
 ## Installation
@@ -154,6 +155,45 @@ See [docs/platform-guides/](docs/platform-guides/) for detailed platform instruc
 3. **End of session:** Run `/session-handoff` to generate a continuation prompt
 4. **Next session:** Paste the handoff prompt to resume seamlessly
 
+## Context Preservation (Claude Code)
+
+ConKeeper automatically preserves your memory before context window compaction. Two hooks monitor usage and escalate:
+
+| Context % | Action |
+|-----------|--------|
+| < 60% | Normal operation |
+| >= 60% | Auto memory-sync (no approval needed, fires once) |
+| >= 80% | Hard block — requires manual `/memory-sync` before continuing |
+| >= 90% | Claude's auto-compaction fires; PreCompact hook warns if unsaved |
+
+### Recommended Setup
+
+For the full escalation sequence, add to your shell profile (`.zshrc`, `.bashrc`, etc.):
+
+```bash
+export CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=90
+```
+
+This pushes Claude's built-in compaction to 90%, giving ConKeeper's hooks room at 60% and 80%.
+
+### Configuration
+
+Thresholds are configurable per-project in `.claude/memory/.memory-config.md`:
+
+```yaml
+---
+auto_sync_threshold: 60       # When to auto-sync (default: 60)
+hard_block_threshold: 80      # When to block until manual sync (default: 80)
+context_window_tokens: 200000 # Context window size (default: 200000)
+---
+```
+
+Adjust via `/memory-config` or edit the file directly.
+
+### Requirements
+
+The context preservation hooks require `jq` and `bc`. Install via your package manager if not already present. Hooks exit gracefully if either is missing.
+
 ## Design Principles
 
 - **Files are sufficient** - All memory in `.md` files; no database
@@ -192,6 +232,6 @@ ConKeeper was inspired by [ContextPortal](https://github.com/GreatScottyMac/cont
 
 ## License
 
-MIT License with Commercial Product Restriction - See [LICENSE](LICENSE) for details.
+Apache License 2.0 with Commons Clause - See [LICENSE](LICENSE) for details.
 
-You may use this freely for personal, professional, educational, and internal business purposes. You may not incorporate it into commercial products or services sold to third parties.
+You may freely use, modify, and distribute this software. The Commons Clause restricts selling the software itself as a commercial product or service.
