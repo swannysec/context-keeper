@@ -30,6 +30,9 @@ View and modify ConKeeper configuration for the current project.
 | `suggest_memories` | true/false | Whether to suggest memory additions |
 | `auto_load` | true/false | Auto-load memory at session start |
 | `output_style` | quiet/normal/explanatory | Output verbosity |
+| `auto_sync_threshold` | 0-100 (default: 60) | Context % to trigger auto memory-sync |
+| `hard_block_threshold` | 0-100 (default: 80) | Context % to block prompts until sync |
+| `context_window_tokens` | integer (default: 200000) | Context window size in tokens |
 
 ## Workflow
 
@@ -55,6 +58,9 @@ Check for `.claude/memory/.memory-config.md`:
 > 3. Auto load setting
 > 4. Output style
 > 5. Nothing (exit)
+> 6. Auto-sync threshold
+> 7. Hard-block threshold
+> 8. Context window size
 
 ### Step 4: Apply Changes
 
@@ -66,6 +72,9 @@ token_budget: standard
 suggest_memories: true
 auto_load: true
 output_style: normal
+auto_sync_threshold: 60
+hard_block_threshold: 80
+context_window_tokens: 200000
 ---
 ```
 

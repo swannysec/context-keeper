@@ -248,10 +248,31 @@ suggest_memories: true    # Whether to suggest memory additions
 auto_load: true           # Whether to auto-load memory at session start
 output_style: explanatory # Output verbosity (quiet, normal, explanatory)
 token_budget: standard    # Token budget preset: compact, standard, or detailed
+auto_sync_threshold: 60    # Context % to trigger auto memory-sync
+hard_block_threshold: 80   # Context % to block prompts until sync
+context_window_tokens: 200000  # Total context window size in tokens
 ---
 ```
 
 This file is optional. If not present, defaults are used.
+
+### Context Preservation Settings
+
+These settings control ConKeeper's automatic context preservation hooks, which trigger memory syncs before context window compaction.
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `auto_sync_threshold` | 60 | Context usage percentage (0-100) at which auto memory-sync is triggered |
+| `hard_block_threshold` | 80 | Context usage percentage at which prompts are blocked until manual sync |
+| `context_window_tokens` | 200000 | Total context window size in tokens (used for percentage calculation) |
+
+**Behavior at each threshold:**
+- **Below `auto_sync_threshold`:** No action. Normal operation.
+- **At/above `auto_sync_threshold`:** The UserPromptSubmit hook injects auto-sync instructions once per session. The AI assistant runs memory-sync without user approval.
+- **At/above `hard_block_threshold`:** The UserPromptSubmit hook blocks the prompt (after auto-sync has had a chance to run). The user must run `/memory-sync` manually and resubmit.
+- **At 90% (recommended `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE`):** Claude Code's built-in auto-compaction fires. The PreCompact hook warns if memory-sync hasn't run.
+
+**Note:** For the full escalation sequence, set `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=90` in your shell profile. This gives ConKeeper's hooks room to preserve context before compaction occurs.
 
 ### Token Budget Presets
 
