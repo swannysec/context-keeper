@@ -122,6 +122,37 @@ ADR structure:
 - **Conflicting updates:** Show diff, ask user to resolve
 - **File permission issues:** Report and skip affected files
 
+## Auto-Sync Mode (Context Preservation)
+
+ConKeeper's UserPromptSubmit hook monitors context window usage. When usage exceeds the configured threshold (default: 60%), the hook injects instructions to trigger an automatic memory sync.
+
+### Differences from Manual Sync
+
+| Aspect | Manual Sync | Auto-Sync |
+|--------|-------------|-----------|
+| Trigger | User runs `/memory-sync` | Hook injects `<conkeeper-auto-sync>` tag |
+| Approval | Step 3: User confirms changes | Skipped — changes applied directly |
+| Scope | Full sync with review | Full sync without review |
+| Completion message | "Memory synced. [N] files updated." | "[ConKeeper: Auto memory-sync complete. Consider running /clear to start fresh with your synced context.]" |
+
+### Flow
+
+1. UserPromptSubmit hook detects context usage >= threshold
+2. Hook injects `additionalContext` with sync instructions
+3. AI assistant detects `<conkeeper-auto-sync>` tag
+4. Assistant runs Steps 1, 2, 4 of the sync workflow (skipping Step 3 approval)
+5. Assistant completes the user's original task
+6. Response ends with the auto-sync completion marker
+
+### Configuration
+
+Thresholds are configured in `.claude/memory/.memory-config.md`:
+- `auto_sync_threshold`: Percentage at which auto-sync triggers (default: 60)
+- `hard_block_threshold`: Percentage at which the hook blocks prompts until manual sync (default: 80)
+- `context_window_tokens`: Total context window size in tokens (default: 200000)
+
+See the schema documentation for details.
+
 ## Platform-Specific Notes
 
 > **Note:** Shell command examples use Unix/bash syntax for illustration. Adapt for your platform's shell or use your AI assistant's file manipulation capabilities.

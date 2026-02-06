@@ -1,6 +1,6 @@
 {
   "name": "context-keeper",
-  "version": "0.3.4",
+  "version": "0.4.0",
   "description": "File-based agent memory system for persistent context across sessions",
   "author": {
     "name": "swannysec",
@@ -8,7 +8,7 @@
   },
   "repository": "https://github.com/swannysec/context-keeper",
   "homepage": "https://github.com/swannysec/context-keeper#readme",
-  "license": "MIT-Commercial-Restriction",
+  "license": "Apache-2.0 WITH Commons-Clause-1.0",
   "keywords": [
     "memory",
     "context",

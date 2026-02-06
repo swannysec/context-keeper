@@ -5,6 +5,33 @@ All notable changes to ConKeeper will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-02-06
+
+### Added
+
+- **Pre-compaction context preservation** — automatic memory-sync before context window compaction
+  - `UserPromptSubmit` hook monitors context usage and triggers auto-sync at configurable threshold (default: 60%)
+  - Hard-block at configurable threshold (default: 80%) requires manual `/memory-sync` before continuing
+  - `PreCompact` hook warns if memory-sync hasn't run when compaction starts
+  - Auto-sync mode in `/memory-sync` skill — skips user approval when hook-triggered
+  - Session-scoped flag files prevent repeated nudges (4-hour TTL)
+- **New configuration options** in `.memory-config.md`
+  - `auto_sync_threshold` — context percentage to trigger auto-sync (default: 60)
+  - `hard_block_threshold` — context percentage to block prompts (default: 80)
+  - `context_window_tokens` — total context window size (default: 200000)
+
+### Changed
+
+- **License** changed from MIT with Commercial Product Restriction to Apache 2.0 with Commons Clause
+- `hooks.json` now registers `UserPromptSubmit` and `PreCompact` hooks alongside `SessionStart`
+- Memory-sync skill and workflow documentation updated with auto-sync mode
+- Memory-config skill updated with context preservation settings
+
+### Notes
+
+- For the full escalation sequence (60% sync → 80% block → 90% compact), set `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=90` in your shell profile
+- Requires `jq` and `bc` — hooks exit gracefully if either is missing
+
 ## [0.2.0] - 2025-01-21
 
 ### Added
