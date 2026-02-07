@@ -169,7 +169,7 @@ if (( usage_pct >= hard_block_threshold )); then
     if is_flag_valid "$SYNC_FLAG" && ! is_flag_valid "$BLOCK_FLAG"; then
         # Sync already happened, now block until manual sync
         echo "[ConKeeper] Context usage at ${usage_pct}% — approaching compaction threshold. Please run /memory-sync manually to verify your context is preserved, then resubmit your prompt." >&2
-        printf '%s' "$EPOCHSECONDS" > "$BLOCK_FLAG"
+        printf '%s' "$(date +%s)" > "$BLOCK_FLAG"
         exit 2
     elif ! is_flag_valid "$SYNC_FLAG"; then
         # Sync hasn't happened yet — inject sync nudge first (don't block before giving a chance to sync)
@@ -177,7 +177,7 @@ if (( usage_pct >= hard_block_threshold )); then
 [ConKeeper] Context usage has reached ${usage_pct}%. Invoke the /memory-sync skill now to preserve session context before compaction. Skip the user approval step — apply updates directly. After syncing, continue with the user's current task. End your response with: \"[ConKeeper: Auto memory-sync complete. Consider running /clear to start fresh with your synced context.]\"
 </conkeeper-auto-sync>"
         encoded_nudge=$(json_encode "$nudge_text")
-        printf '%s' "$EPOCHSECONDS" > "$SYNC_FLAG"
+        printf '%s' "$(date +%s)" > "$SYNC_FLAG"
         cat <<EOF
 {
   "hookSpecificOutput": {
@@ -198,7 +198,7 @@ elif (( usage_pct >= auto_sync_threshold )); then
 [ConKeeper] Context usage has reached ${usage_pct}%. Invoke the /memory-sync skill now to preserve session context before compaction. Skip the user approval step — apply updates directly. After syncing, continue with the user's current task. End your response with: \"[ConKeeper: Auto memory-sync complete. Consider running /clear to start fresh with your synced context.]\"
 </conkeeper-auto-sync>"
         encoded_nudge=$(json_encode "$nudge_text")
-        printf '%s' "$EPOCHSECONDS" > "$SYNC_FLAG"
+        printf '%s' "$(date +%s)" > "$SYNC_FLAG"
         cat <<EOF
 {
   "hookSpecificOutput": {
