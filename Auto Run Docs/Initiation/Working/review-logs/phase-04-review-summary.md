@@ -70,8 +70,31 @@ All 12 findings (2 Critical, 3 High, 7 Medium) fixed autonomously. Summary:
 - Phase 03 tests (regression): **10 passed, 0 failed**
 - `session-start.sh` JSON output: **valid** (verified with jq)
 
-## Stage 5: Simplicity Review
-*(pending)*
+## Stage 5: Simplicity Review (compound-engineering:review:code-simplicity-reviewer)
+
+### Findings
+
+| # | Area | Classification | Description |
+|---|------|---------------|-------------|
+| S1 | session-start.sh | **Should simplify** | Sources `lib-privacy.sh` but never calls `strip_private()` or `is_file_private()`. YAGNI — code loaded for "Phase 05+ enhancements" that don't reference these functions. |
+| S2 | lib-privacy.sh | Borderline | Separate file for 2 functions with 1 consumer (tests). Premature extraction, but file is small (29 lines) and clean. Tolerable as-is. |
+| S3 | is_file_private() | Justified | head + awk + grep pipeline is proportional to correctness needs (CR-1 fix). Each step serves distinct purpose. |
+| S4 | 20-line front matter window | Borderline | Arbitrary but harmless. Awk exits at `---` anyway; 20 is just a safety cap for malformed files. |
+| S5 | Test 2 (sed BSD compat) | **Should simplify** | Redundant with Test 1 — both exercise same sed pattern. Test 1 through `strip_private()`, Test 2 raw sed. If sed breaks, both fail. |
+| S6 | Schema edge cases 3 & 5 | Borderline | Empty blocks and category-tags-in-private are obvious behaviors. 2 lines total — not worth removing. |
+| S7 | Schema planned enforcement rows | **Should simplify** | Enforcement table lists `/memory-search` and `/memory-reflect` as "(planned)" — speculative docs for unimplemented phases. |
+| S8 | Template privacy hints | Justified | 1 line per template, primary discoverability mechanism. Good design. |
+| S9 | Platform adapter duplication | Justified | 5 identical 3-line blocks across separate platform files. Inherent to cross-platform design. |
+| S10 | memory-config Privacy section | Justified | Clarifies "no toggle, always on" — prevents user confusion. |
+
+### Summary
+
+- **Should apply:** 3 findings (S1, S5, S7)
+- **Borderline:** 3 findings (S2, S4, S6) — no action needed
+- **Justified:** 4 findings (S3, S8, S9, S10) — complexity warranted
+
+**Estimated reduction:** ~29 lines across 3 files
+**Overall assessment:** Implementation is fundamentally sound. Core code (lib-privacy.sh) is 29 lines, well-tested, and correctly handles security-critical edge cases. Main issue is YAGNI violation where session-start.sh eagerly loads code it doesn't use.
 
 ## Stage 7: Security Review
 *(pending)*

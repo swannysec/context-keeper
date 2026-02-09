@@ -124,7 +124,8 @@ Review stages use dedicated agent types. Agent fixes findings autonomously unles
 - [x] Stage 4 — Fix code and architecture findings: Fix all Critical, High, and Medium findings autonomously (escalate if design-changing). Re-run `bash tests/phase-04-privacy/test-privacy.sh` and `bash tests/phase-03-categories/test-categories.sh` after fixes.
   - **Result:** All 12 findings fixed (2 Critical, 3 High, 7 Medium). Key changes: extracted `hooks/lib-privacy.sh` shared library, rewrote `is_file_private()` with YAML front matter validation using awk, `strip_private()` now stdin-based with line-start anchoring, added Windsurf privacy guidance, 3 new tests (10 total). Phase 04: 10/10 pass. Phase 03 regression: 10/10 pass. Details in `Working/review-logs/phase-04-review-summary.md`.
 
-- [ ] Stage 5 — Simplicity review: Launch one sub-agent: `subagent_type: "compound-engineering:review:code-simplicity-reviewer"` — review post-fix code for over-engineering, YAGNI violations, unnecessary abstractions in the privacy stripping functions and enforcement logic.
+- [x] Stage 5 — Simplicity review: Launch one sub-agent: `subagent_type: "compound-engineering:review:code-simplicity-reviewer"` — review post-fix code for over-engineering, YAGNI violations, unnecessary abstractions in the privacy stripping functions and enforcement logic.
+  - **Result:** 10 findings analyzed. 3 "should simplify" (S1: dead sourcing in session-start.sh, S5: redundant Test 2, S7: speculative enforcement table rows), 3 "borderline" (no action), 4 "justified" (complexity warranted). ~29 lines removable. Full details in `Working/review-logs/phase-04-review-summary.md`.
 
 - [ ] Stage 6 — Fix simplicity findings + test: Fix all "should apply" findings autonomously. Re-run all tests. Write simplicity summary to review log.
 
