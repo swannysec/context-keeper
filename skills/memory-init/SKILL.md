@@ -163,3 +163,24 @@ Output summary:
 >
 > Use `/memory-sync` to update memory as you work.
 > Use `/memory-config` to adjust settings later.
+
+### Step 7: Retroactive Category Tagging (Optional)
+
+If any memory files already contain entries (e.g., reset scenario or migration from a previous setup), offer to tag them:
+
+> Tag existing memory entries with categories? [y/n]
+
+**If yes:** Read each memory file and classify each entry or section heading using these keyword matching rules:
+
+- Contains "decided", "chose", "selected", "went with" → `<!-- @category: decision -->`
+- Contains "pattern", "convention", "always", "never", "standard" → `<!-- @category: pattern -->`
+- Contains "fixed", "bug", "resolved", "workaround" → `<!-- @category: bugfix -->`
+- Contains "convention", "naming", "format", "style" → `<!-- @category: convention -->`
+- Contains "learned", "discovered", "TIL", "realized" → `<!-- @category: learning -->`
+- If unsure, use context to pick the best fit
+
+Place each tag on its own line immediately after the entry it categorizes. Show the proposed tags to the user before applying, then apply on confirmation.
+
+**If no:** Skip — no tags added. Files continue to work normally without tags.
+
+This step is opt-in only. Never auto-tag without asking.

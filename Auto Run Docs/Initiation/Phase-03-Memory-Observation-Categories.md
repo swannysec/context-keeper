@@ -48,7 +48,7 @@ This phase adds inline category tags to memory file entries using HTML comment s
   - The tag should appear in Step 3's proposed output format so users see it before approval
   - Do NOT add any new dependencies or configuration — categories are always enabled
 
-- [ ] Update `/memory-init` skill to offer retroactive tagging of existing memory:
+- [x] Update `/memory-init` skill to offer retroactive tagging of existing memory:
   - Edit `skills/memory-init/SKILL.md`
   - Add a new optional step after all initialization is complete (after the "Confirm initialization" step)
   - New step: "If memory files already contain entries (reset scenario or migration), ask: 'Tag existing memory entries with categories? [y/n]'"
