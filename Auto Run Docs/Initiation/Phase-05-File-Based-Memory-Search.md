@@ -110,7 +110,7 @@ This phase adds a `/memory-search <query>` skill backed by a standalone cross-pl
   - Each platform adapter should note: "Run `bash <conkeeper-path>/tools/memory-search.sh <query>` to search memory"
   - ✅ Created all 4 platform adapters: codex, copilot, cursor SKILL.md files with YAML frontmatter; zed rules-library/memory-search.md with numbered-steps format. All reference `tools/memory-search.sh` via generic `<conkeeper-path>` pattern.
 
-- [ ] Write tests for memory search functionality:
+- [x] Write tests for memory search functionality:
   - Create `tests/phase-05-search/test-search.sh`
   - **Setup:** Create a temporary memory directory with sample files containing known content, category tags, and privacy tags
   - **Test 1:** Basic search finds matches in project memory files
@@ -125,6 +125,7 @@ This phase adds a `/memory-search <query>` skill backed by a standalone cross-pl
   - **Test 10:** Output format is structured with file headers, line numbers, and category tags
   - **Cleanup:** Remove temporary test directory after all tests
   - All tests runnable via `bash tests/phase-05-search/test-search.sh`
+  - ✅ All 11 tests pass (Test 9 split into 9a/9b). Tests use per-test isolated workdirs with `setup_project_memory` and `setup_global_memory` helpers. Temp directory cleanup via `trap EXIT`. Verified on macOS Bash 3.2.57. Existing Phase 03 and Phase 04 tests remain green.
 
 - [ ] Bump version to v0.7.0 and verify all existing tests pass:
   - Edit `plugin.json`: change version to `"0.7.0"`
