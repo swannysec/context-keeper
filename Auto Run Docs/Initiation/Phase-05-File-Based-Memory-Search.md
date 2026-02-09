@@ -89,12 +89,13 @@ This phase adds a `/memory-search <query>` skill backed by a standalone cross-pl
   - Keep it concise — this adds ~15 tokens to the session-start context
   - ✅ Added at line 62. JSON output validated.
 
-- [ ] Update `core/snippet.md` to include `/memory-search` in available workflows:
+- [x] Update `core/snippet.md` to include `/memory-search` in available workflows:
   - In all three snippet variants (append, create new, manual copy), add to the **Available Workflows** list:
     ```
     - **memory-search** - Search memory files by keyword or category
     ```
   - Add it after the existing `session-handoff` entry
+  - ✅ Added to all 3 snippet variants (lines 25, 63, 96).
 
 - [ ] Update `core/memory/schema.md` to reference search capability:
   - In the main directory structure section, add a note: "Use `/memory-search <query>` to find entries across memory files"
