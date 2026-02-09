@@ -102,12 +102,13 @@ This phase adds a `/memory-search <query>` skill backed by a standalone cross-pl
   - In the Category Tags section (added in Phase 03), add: "Categories are searchable via `/memory-search --category <name>`"
   - ✅ Added search note after directory structure (line 25). Updated "Searching by Category" section to lead with `/memory-search --category` examples (lines 383-393). Also updated Enforcement Points table to move `/memory-search` from "future" to implemented (line 450).
 
-- [ ] Update platform adapters to reference the search script:
+- [x] Update platform adapters to reference the search script:
   - `platforms/codex/.codex/skills/`: Create `memory-search/SKILL.md` mirroring the Claude Code skill but referencing the script path as `tools/memory-search.sh` relative to the ConKeeper install
   - `platforms/copilot/.github/skills/`: Create `memory-search/SKILL.md` with same approach
   - `platforms/cursor/.cursor/skills/`: Create `memory-search/SKILL.md` with same approach
   - `platforms/zed/rules-library/`: Create `memory-search.md` with search workflow guidance that references the shell script
   - Each platform adapter should note: "Run `bash <conkeeper-path>/tools/memory-search.sh <query>` to search memory"
+  - ✅ Created all 4 platform adapters: codex, copilot, cursor SKILL.md files with YAML frontmatter; zed rules-library/memory-search.md with numbered-steps format. All reference `tools/memory-search.sh` via generic `<conkeeper-path>` pattern.
 
 - [ ] Write tests for memory search functionality:
   - Create `tests/phase-05-search/test-search.sh`
