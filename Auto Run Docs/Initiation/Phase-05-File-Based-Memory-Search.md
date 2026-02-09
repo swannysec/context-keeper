@@ -127,13 +127,14 @@ This phase adds a `/memory-search <query>` skill backed by a standalone cross-pl
   - All tests runnable via `bash tests/phase-05-search/test-search.sh`
   - ✅ All 11 tests pass (Test 9 split into 9a/9b). Tests use per-test isolated workdirs with `setup_project_memory` and `setup_global_memory` helpers. Temp directory cleanup via `trap EXIT`. Verified on macOS Bash 3.2.57. Existing Phase 03 and Phase 04 tests remain green.
 
-- [ ] Bump version to v0.7.0 and verify all existing tests pass:
+- [x] Bump version to v0.7.0 and verify all existing tests pass:
   - Edit `plugin.json`: change version to `"0.7.0"`
   - Run Phase 03 tests (categories)
   - Run Phase 04 tests (privacy)
   - Run Phase 05 tests (search)
   - Verify session-start.sh still produces valid JSON output
   - Commit all changes with message: `feat: add /memory-search skill with cross-platform shell script (v0.7.0)`
+  - ✅ Version bumped to 0.7.0. All 34 tests pass (Phase 03: 10, Phase 04: 13, Phase 05: 11). session-start.sh JSON validated with jq.
 
 ## Review & Validation
 
