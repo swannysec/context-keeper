@@ -17,7 +17,7 @@ related:
 
 ## Section 1: Executive Summary
 
-- **Search is the #1 gap:** All 7 competitors offer some form of search (full-text, semantic, hybrid, or pattern-based). ConKeeper has none. This is the single most impactful missing capability.
+- **Search is the #1 gap:** 6 of 7 competitors offer dedicated search (full-text, semantic, or hybrid); claude-reflect has transcript scanning only. ConKeeper has none. This is the single most impactful missing capability.
 - **ConKeeper leads on platform breadth and simplicity:** 6-platform support (vs. 1-3 for most competitors) and zero-dependency file-based storage are genuine differentiators, especially for individual developers and enterprise users wary of heavy infrastructure.
 - **Session retrospection is the strongest net-new opportunity:** claude-reflect's correction capture and skill discovery patterns complement ConKeeper's existing session-handoff/memory-sync perfectly — ConKeeper captures *what happened*, but not *what was learned*.
 - **MCP tools are becoming table-stakes:** 5 of 7 competitors expose memory via MCP tools. ConKeeper's hook+skill approach is Claude Code-native but limits interoperability with non-Claude tooling.
@@ -162,7 +162,7 @@ Features competitors have that ConKeeper lacks, sorted by estimated impact.
 
 | # | Feature Gap | Impact | Lift | Competitors With It | Notes |
 |---|------------|--------|------|-------------------|-------|
-| 1 | **Any form of search** (full-text, keyword, or semantic) | **High** | **Medium** | 7/7 (all competitors) | #1 gap. Even a simple `grep`-based skill would be transformative. Semantic search requires embedding infrastructure ConKeeper doesn't have. |
+| 1 | **Any form of search** (full-text, keyword, or semantic) | **High** | **Small** (grep) to **Large** (semantic) | 6/7 (all except claude-reflect; claude-reflect has `--scan-history` for transcript scanning but no general memory search) | #1 gap. A `grep`-based skill (Small lift) would close the basic gap; semantic search requires embedding infrastructure (Large lift). |
 | 2 | **Correction/learning capture** from user feedback | **High** | **Medium** | 1/7 (claude-reflect) | Only claude-reflect does this, but it's the highest-value net-new feature. ConKeeper's hooks could detect corrections via regex in UserPromptSubmit. |
 | 3 | **MCP tool exposure** for cross-tool interoperability | **High** | **Medium** | 5/7 (claude-mem, MemOS, OpenMemory, mcp-memory-service, basic-memory) | Would let non-Claude tools access ConKeeper memories. Requires building an MCP server (TypeScript or Python). |
 | 4 | **Automatic observation capture** (PostToolUse) | **High** | **Small** | 2/7 (claude-mem, memU) | claude-mem captures every tool use. ConKeeper could add a lightweight PostToolUse hook that logs tool names + file paths to session files. |
