@@ -23,22 +23,41 @@ Review conversation for:
 - Patterns established
 - Questions resolved or raised
 
+### Step 2.5: Auto-Categorize Entries
+
+For each new entry identified in Step 2, assign a memory category tag:
+- Contains "decided", "chose", "selected", "went with" → `decision`
+- Contains "pattern", "convention", "always", "never", "standard" → `pattern`
+- Contains "fixed", "bug", "resolved", "workaround" → `bugfix`
+- Contains "convention", "naming", "format", "style" → `convention`
+- Contains "learned", "discovered", "TIL", "realized" → `learning`
+- If unsure, use context to pick the best fit
+
+Include the category tag in the proposed update shown to the user in Step 3. Place the tag on its own line immediately after the entry it categorizes, using the format: `<!-- @category: <value> -->`
+
 ### Step 3: Propose Updates
 
-Present changes to user:
+Present changes to user (include category tags so users see them before approval):
 ```
 Memory Sync Summary:
 
 active-context.md:
   - Current focus: [old] → [new]
+  - Added: Decided to use [X] over [Y]
+    <!-- @category: decision -->
   - Added open question: [question]
 
 progress.md:
   - Marked complete: [task]
   - Added: [new task]
 
+patterns.md:
+  - Added: Always use [pattern description]
+    <!-- @category: pattern -->
+
 decisions/:
   - New: ADR-003-[title] (reason: [brief])
+    <!-- @category: decision -->
 
 Proceed with sync? [y/n]
 ```
@@ -89,7 +108,7 @@ When ConKeeper's UserPromptSubmit hook detects high context usage (>= configured
 **When this tag is detected in the current context:**
 
 1. **Skip Step 3** (Propose Updates / user approval) — apply updates directly
-2. Run Steps 1, 2, and 4 as normal (review state, analyze session, apply updates)
+2. Run Steps 1, 2, 2.5, and 4 as normal (review state, analyze session, auto-categorize, apply updates)
 3. Run Step 5 (confirm) but replace the confirmation with:
 
 > [ConKeeper: Auto memory-sync complete. Consider running /clear to start fresh with your synced context.]

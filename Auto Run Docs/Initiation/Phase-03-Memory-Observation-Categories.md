@@ -31,7 +31,7 @@ This phase adds inline category tags to memory file entries using HTML comment s
   - `core/memory/templates/glossary.md`: No changes needed (table format doesn't suit inline tags)
   - For each modified template, add a brief HTML comment explaining the tag: `<!-- ConKeeper: category tags are invisible in rendered Markdown -->`
 
-- [ ] Update `/memory-sync` skill to auto-categorize new entries during sync:
+- [x] Update `/memory-sync` skill to auto-categorize new entries during sync:
   - Edit `skills/memory-sync/SKILL.md`
   - Insert a new **Step 2.5: Auto-Categorize Entries** between existing Step 2 (Analyze Session) and Step 3 (Propose Updates)
   - Step 2.5 instructions:
