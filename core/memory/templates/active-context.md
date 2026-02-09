@@ -15,5 +15,7 @@
 ## Blockers
 <!-- What's preventing progress? -->
 
+<!-- To mark sensitive content private: wrap in <private>...</private> tags -->
+
 ---
 *Session: [date]*

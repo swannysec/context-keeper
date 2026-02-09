@@ -25,12 +25,13 @@ This phase adds `<private>...</private>` block wrappers for sensitive content in
     - Empty private blocks: `<private></private>` is valid, means nothing is hidden
   - Add example usage showing a patterns.md entry with a private API key reference
 
-- [ ] Update core memory templates with privacy tag examples:
+- [x] Update core memory templates with privacy tag examples:
   - `core/memory/templates/active-context.md`: Add a commented example at the bottom: `<!-- To mark sensitive content private: wrap in <private>...</private> tags -->`
   - `core/memory/templates/patterns.md`: Add same commented hint
   - `core/memory/templates/product-context.md`: Add same commented hint in the Constraints section (common place for sensitive info)
   - `core/memory/templates/adr-template.md`: Add hint in the Rationale section
   - Other templates: no changes needed (session files and progress files rarely contain sensitive content)
+  - **Done:** Verified glossary.md, session-template.md, and progress.md correctly excluded (no sensitive content sections).
 
 - [ ] Modify `hooks/session-start.sh` to strip private content before context injection:
   - After reading memory files for context injection (around line 49 where `context` is built), add privacy stripping

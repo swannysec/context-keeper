@@ -14,5 +14,7 @@
 ## Testing Patterns
 <!-- Testing conventions -->
 
+<!-- To mark sensitive content private: wrap in <private>...</private> tags -->
+
 ---
 *Last updated: [date]*
