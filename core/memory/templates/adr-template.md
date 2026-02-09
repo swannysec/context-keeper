@@ -13,7 +13,6 @@
 [What was decided - 1 sentence]
 
 ## Rationale
-<!-- To mark sensitive content private: wrap in <private>...</private> tags -->
 - [Key reason 1]
 - [Key reason 2]
 
@@ -23,3 +22,5 @@
 
 ## Alternatives Considered
 - [Alt 1]: [Why rejected]
+
+<!-- To mark sensitive content private: wrap in <private>...</private> tags -->

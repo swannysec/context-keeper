@@ -121,7 +121,8 @@ Review stages use dedicated agent types. Agent fixes findings autonomously unles
 - [x] Stage 3 — Synthesize review findings: Read both outputs. Deduplicate. Create consolidated list. Write summary to review log.
   - **Result:** 12 unique findings after dedup (2 Critical, 3 High, 7 Medium). Consolidated summary written to `Working/review-logs/phase-04-review-summary.md`. Top convergent findings between reviewers: `is_file_private()` correctness (CR-1), Windsurf adapter gap (HI-1), `head -5` fragility (HI-2), test function duplication (HI-3).
 
-- [ ] Stage 4 — Fix code and architecture findings: Fix all Critical, High, and Medium findings autonomously (escalate if design-changing). Re-run `bash tests/phase-04-privacy/test-privacy.sh` and `bash tests/phase-03-categories/test-categories.sh` after fixes.
+- [x] Stage 4 — Fix code and architecture findings: Fix all Critical, High, and Medium findings autonomously (escalate if design-changing). Re-run `bash tests/phase-04-privacy/test-privacy.sh` and `bash tests/phase-03-categories/test-categories.sh` after fixes.
+  - **Result:** All 12 findings fixed (2 Critical, 3 High, 7 Medium). Key changes: extracted `hooks/lib-privacy.sh` shared library, rewrote `is_file_private()` with YAML front matter validation using awk, `strip_private()` now stdin-based with line-start anchoring, added Windsurf privacy guidance, 3 new tests (10 total). Phase 04: 10/10 pass. Phase 03 regression: 10/10 pass. Details in `Working/review-logs/phase-04-review-summary.md`.
 
 - [ ] Stage 5 — Simplicity review: Launch one sub-agent: `subagent_type: "compound-engineering:review:code-simplicity-reviewer"` — review post-fix code for over-engineering, YAGNI violations, unnecessary abstractions in the privacy stripping functions and enforcement logic.
 

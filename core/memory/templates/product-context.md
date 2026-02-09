@@ -11,10 +11,11 @@
 
 ## Constraints
 <!-- Technical, business, or regulatory constraints -->
-<!-- To mark sensitive content private: wrap in <private>...</private> tags -->
 
 ## Non-Goals
 <!-- What this project explicitly doesn't do -->
+
+<!-- To mark sensitive content private: wrap in <private>...</private> tags -->
 
 ---
 *Last updated: [date] by Claude*

@@ -43,6 +43,33 @@ Both reviewers identified overlapping findings. Here is the deduplicated list wi
 - Total unique findings: 12 (Critical: 2, High: 3, Medium: 7)
 - Fixes to apply: All Critical and High, plus all Medium
 
+## Stage 4: Fix Findings
+
+All 12 findings (2 Critical, 3 High, 7 Medium) fixed autonomously. Summary:
+
+### Critical Fixes
+- **CR-1** `is_file_private()` rewritten: validates `---` YAML delimiter on line 1, extracts only front matter block using `awk`, end-anchors grep with `[[:space:]]*$`
+- **CR-2** Added "Unclosed blocks" edge case to schema documenting strip-to-EOF behavior
+
+### High Fixes
+- **HI-1** Added privacy notice to Windsurf `.windsurfrules` memory-sync workflow (Step 2)
+- **HI-2** Front matter search window increased from 5 to 20 lines using awk
+- **HI-3** Extracted `strip_private` and `is_file_private` into `hooks/lib-privacy.sh`, sourced by both `session-start.sh` and tests
+
+### Medium Fixes
+- **ME-1** sed pattern now uses `^[[:space:]]*` anchoring for both `<private>` and `</private>`
+- **ME-2** Test 5 renamed to "strip_private processes tags regardless of code fence context (caller responsibility)"
+- **ME-3** Enforcement table now notes `/memory-search` (Phase 05) and `/memory-reflect` (Phase 08) as planned
+- **ME-4** `strip_private()` now reads from stdin instead of function argument (no ARG_MAX risk)
+- **ME-5** Template privacy hints standardized to bottom-of-file placement (before `---` footer) across all 4 templates
+- **ME-6** Schema code fence edge case rewritten: documents that `strip_private` processes tags regardless of fences, callers responsible for excluding code-fenced blocks
+- **ME-7** Added Tests 8/8b (body text false positive) and Test 9 (partial match `trueish`) — total tests now 10
+
+### Verification
+- Phase 04 tests: **10 passed, 0 failed**
+- Phase 03 tests (regression): **10 passed, 0 failed**
+- `session-start.sh` JSON output: **valid** (verified with jq)
+
 ## Stage 5: Simplicity Review
 *(pending)*
 

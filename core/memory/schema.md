@@ -432,15 +432,16 @@ Privacy tags are enforced at every automated code path:
 | Code Path | Behavior |
 |-----------|----------|
 | **SessionStart hook** | Strips `<private>` blocks before context injection; skips files with `private: true` |
-| **`/memory-search`** | Omits private block contents from search results; skips private files |
+| **`/memory-search`** | Omits private block contents from search results; skips private files *(planned — Phase 05)* |
 | **`/memory-sync`** | Skips private content during analysis; never moves or references private content |
-| **`/memory-reflect`** | Skips private content during evidence gathering |
+| **`/memory-reflect`** | Skips private content during evidence gathering *(planned — Phase 08)* |
 
 ### Edge Cases
 
 - **Nesting:** NOT supported. If `<private>` tags appear inside an already-open `<private>` block, the outer tag wins and inner tags are treated as plain content. Do not nest `<private>` blocks.
-- **Code fences:** Tags inside code fences (indented 4+ spaces or wrapped in triple backticks) are NOT processed. Only `<private>` at line start with optional leading whitespace is recognized as a privacy tag.
+- **Code fences:** The `strip_private` function processes `<private>` tags regardless of code fence context. Callers that inject file content are responsible for excluding code-fenced blocks before piping through `strip_private`. In instruction-level enforcement (sync, reflect, search), the LLM is expected to recognize code fences and not treat documented examples as real privacy tags.
 - **Empty blocks:** `<private></private>` (on separate lines) is valid and means nothing is hidden.
+- **Unclosed blocks:** If a `<private>` tag has no matching `</private>`, all content from the opening tag to the end of the file is stripped. Always close your `<private>` blocks to avoid unintended data loss.
 - **Category tags inside private blocks:** Category tags within `<private>` blocks are subject to the same privacy enforcement as the content they annotate — they will not appear in search results or be processed by automation.
 
 ### Example: Patterns File with Private Content

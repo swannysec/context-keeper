@@ -25,18 +25,8 @@ fail() {
   echo "FAIL: $1"
 }
 
-# Source privacy functions from session-start.sh
-# We extract just the functions to avoid executing the main script body
-strip_private() {
-    local content="$1"
-    printf '%s' "$content" | sed '/<private>/,/<\/private>/d'
-}
-
-is_file_private() {
-    local file="$1"
-    head -5 "$file" | grep -q '^private: *true' && return 0
-    return 1
-}
+# Source shared privacy functions from the canonical location
+. "$REPO_ROOT/hooks/lib-privacy.sh"
 
 # ---------------------------------------------------------------------------
 # Test 1: strip_private removes <private> blocks from content
@@ -55,7 +45,7 @@ EOF
 )"
 
   local result
-  result=$(strip_private "$input")
+  result=$(printf '%s' "$input" | strip_private)
 
   if echo "$result" | grep -q "Production endpoint" && \
      echo "$result" | grep -q "Rate limit" && \
@@ -82,7 +72,7 @@ Line after
 EOF
 
   local result
-  result=$(sed '/<private>/,/<\/private>/d' "$sample")
+  result=$(sed '/^[[:space:]]*<private>/,/^[[:space:]]*<\/private>/d' "$sample")
 
   if echo "$result" | grep -q "Line before" && \
      echo "$result" | grep -q "Line after" && \
@@ -135,9 +125,10 @@ EOF
 }
 
 # ---------------------------------------------------------------------------
-# Test 5: Tags inside code fences are NOT stripped
+# Test 5: strip_private processes tags regardless of code fence context
+# (caller is responsible for excluding code-fenced content)
 # ---------------------------------------------------------------------------
-test_code_fence_preserved() {
+test_code_fence_caller_responsibility() {
   local input
   input="$(cat <<'TESTEOF'
 # Documentation
@@ -155,18 +146,11 @@ TESTEOF
 )"
 
   local result
-  result=$(strip_private "$input")
+  result=$(printf '%s' "$input" | strip_private)
 
-  # The sed-based strip_private processes line-by-line and will strip
-  # <private> tags even inside code fences. This is a known limitation
-  # documented in the schema: "code-fenced content should not be piped
-  # through strip_private." The caller is responsible for handling code
-  # fences before invoking strip_private.
-  #
-  # Test validates the documented behavior: the function does strip
-  # content between <private> tags regardless of code fence context.
-  # Future phases that implement content injection will handle the
-  # code fence exclusion at the caller level.
+  # strip_private processes line-by-line and will strip <private> tags
+  # even inside code fences. This is documented behavior: the caller is
+  # responsible for handling code fences before invoking strip_private.
   if echo "$result" | grep -q "Documentation" && \
      echo "$result" | grep -q "Real content here"; then
     pass "Test 5: Content outside private blocks preserved (code fence handling is caller responsibility)"
@@ -193,7 +177,7 @@ EOF
 )"
 
   local result
-  result=$(strip_private "$input")
+  result=$(printf '%s' "$input" | strip_private)
 
   if [ "$result" = "$input" ]; then
     pass "Test 6: File with no privacy tags passes through unchanged"
@@ -225,7 +209,7 @@ EOF
 )"
 
   local result
-  result=$(strip_private "$input")
+  result=$(printf '%s' "$input" | strip_private)
 
   if echo "$result" | grep -q "Service A endpoint" && \
      echo "$result" | grep -q "Service B endpoint" && \
@@ -241,6 +225,62 @@ EOF
 }
 
 # ---------------------------------------------------------------------------
+# Test 8: is_file_private rejects private: true in body text (no front matter)
+# ---------------------------------------------------------------------------
+test_is_file_private_body_false_positive() {
+  local sample="$TMPDIR_TEST/test8_no_frontmatter.md"
+  cat > "$sample" <<'EOF'
+# Regular Document
+
+This file has no YAML front matter.
+private: true
+This should NOT be detected as private.
+EOF
+
+  if ! is_file_private "$sample"; then
+    pass "Test 8: is_file_private rejects private: true in body (no front matter)"
+  else
+    fail "Test 8: is_file_private should reject private: true without front matter delimiters"
+  fi
+
+  # Also test: private: true in body AFTER valid front matter
+  local sample2="$TMPDIR_TEST/test8_body_text.md"
+  cat > "$sample2" <<'EOF'
+---
+title: Normal File
+---
+# Content
+private: true
+This is just body text, not a front matter field.
+EOF
+
+  if ! is_file_private "$sample2"; then
+    pass "Test 8b: is_file_private rejects private: true in body after front matter"
+  else
+    fail "Test 8b: is_file_private should reject private: true in body text"
+  fi
+}
+
+# ---------------------------------------------------------------------------
+# Test 9: is_file_private rejects partial match (private: trueish)
+# ---------------------------------------------------------------------------
+test_is_file_private_partial_match() {
+  local sample="$TMPDIR_TEST/test9.md"
+  cat > "$sample" <<'EOF'
+---
+private: trueish
+---
+# Content
+EOF
+
+  if ! is_file_private "$sample"; then
+    pass "Test 9: is_file_private rejects partial match (private: trueish)"
+  else
+    fail "Test 9: is_file_private should reject private: trueish"
+  fi
+}
+
+# ---------------------------------------------------------------------------
 # Run all tests
 # ---------------------------------------------------------------------------
 echo "=== Phase 04: Privacy Tag Tests ==="
@@ -250,9 +290,11 @@ test_strip_private_basic
 test_sed_bsd_compat
 test_is_file_private_true
 test_is_file_private_false
-test_code_fence_preserved
+test_code_fence_caller_responsibility
 test_no_tags_passthrough
 test_multiple_private_blocks
+test_is_file_private_body_false_positive
+test_is_file_private_partial_match
 
 echo ""
 echo "=== Results: $PASS passed, $FAIL failed ==="

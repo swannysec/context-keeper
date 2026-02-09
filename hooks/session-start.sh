@@ -40,23 +40,10 @@ validate_memory_dir() {
 }
 
 # Privacy stripping — used by content injection (see Phase 05+ enhancements)
-# Strips block-level <private>...</private> content from input.
-# Only matches <private> at line start (with optional whitespace).
-# Tags inside code fences are not affected by this function because
-# code-fenced content should not be piped through strip_private.
-strip_private() {
-    local content="$1"
-    printf '%s' "$content" | sed '/<private>/,/<\/private>/d'
-}
-
-# Checks if a file has private: true in its YAML front matter.
-# Returns 0 (true) if private, 1 (false) otherwise.
-is_file_private() {
-    local file="$1"
-    # Check within first 5 lines for YAML front matter private flag
-    head -5 "$file" | grep -q '^private: *true' && return 0
-    return 1
-}
+# Source shared privacy functions from lib-privacy.sh
+HOOKS_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=lib-privacy.sh
+. "$HOOKS_DIR/lib-privacy.sh"
 
 has_global=false
 has_project=false
