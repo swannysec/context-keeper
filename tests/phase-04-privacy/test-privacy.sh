@@ -59,36 +59,10 @@ EOF
 }
 
 # ---------------------------------------------------------------------------
-# Test 2: sed pattern works with BSD sed (macOS) — validates on current platform
-# ---------------------------------------------------------------------------
-test_sed_bsd_compat() {
-  local sample="$TMPDIR_TEST/test2.md"
-  cat > "$sample" <<'EOF'
-Line before
-<private>
-Secret stuff here
-</private>
-Line after
-EOF
-
-  local result
-  result=$(sed '/^[[:space:]]*<private>/,/^[[:space:]]*<\/private>/d' "$sample")
-
-  if echo "$result" | grep -q "Line before" && \
-     echo "$result" | grep -q "Line after" && \
-     ! echo "$result" | grep -q "Secret"; then
-    pass "Test 2: sed pattern works on current platform (BSD/GNU compat)"
-  else
-    fail "Test 2: sed pattern failed on current platform"
-    echo "  Got: $result"
-  fi
-}
-
-# ---------------------------------------------------------------------------
-# Test 3: is_file_private returns true for private: true in front matter
+# Test 2: is_file_private returns true for private: true in front matter
 # ---------------------------------------------------------------------------
 test_is_file_private_true() {
-  local sample="$TMPDIR_TEST/test3.md"
+  local sample="$TMPDIR_TEST/test2.md"
   cat > "$sample" <<'EOF'
 ---
 private: true
@@ -98,17 +72,17 @@ Some secret content
 EOF
 
   if is_file_private "$sample"; then
-    pass "Test 3: is_file_private returns true for private: true"
+    pass "Test 2: is_file_private returns true for private: true"
   else
-    fail "Test 3: is_file_private should return true for private: true"
+    fail "Test 2: is_file_private should return true for private: true"
   fi
 }
 
 # ---------------------------------------------------------------------------
-# Test 4: is_file_private returns false for non-private files
+# Test 3: is_file_private returns false for non-private files
 # ---------------------------------------------------------------------------
 test_is_file_private_false() {
-  local sample="$TMPDIR_TEST/test4.md"
+  local sample="$TMPDIR_TEST/test3.md"
   cat > "$sample" <<'EOF'
 ---
 title: Regular File
@@ -118,14 +92,14 @@ Nothing private here
 EOF
 
   if ! is_file_private "$sample"; then
-    pass "Test 4: is_file_private returns false for non-private file"
+    pass "Test 3: is_file_private returns false for non-private file"
   else
-    fail "Test 4: is_file_private should return false for non-private file"
+    fail "Test 3: is_file_private should return false for non-private file"
   fi
 }
 
 # ---------------------------------------------------------------------------
-# Test 5: strip_private processes tags regardless of code fence context
+# Test 4: strip_private processes tags regardless of code fence context
 # (caller is responsible for excluding code-fenced content)
 # ---------------------------------------------------------------------------
 test_code_fence_caller_responsibility() {
@@ -153,15 +127,15 @@ TESTEOF
   # responsible for handling code fences before invoking strip_private.
   if echo "$result" | grep -q "Documentation" && \
      echo "$result" | grep -q "Real content here"; then
-    pass "Test 5: Content outside private blocks preserved (code fence handling is caller responsibility)"
+    pass "Test 4: Content outside private blocks preserved (code fence handling is caller responsibility)"
   else
-    fail "Test 5: Content outside private blocks should be preserved"
+    fail "Test 4: Content outside private blocks should be preserved"
     echo "  Got: $result"
   fi
 }
 
 # ---------------------------------------------------------------------------
-# Test 6: File with no privacy tags passes through unchanged
+# Test 5: File with no privacy tags passes through unchanged
 # ---------------------------------------------------------------------------
 test_no_tags_passthrough() {
   local input
@@ -180,16 +154,16 @@ EOF
   result=$(printf '%s' "$input" | strip_private)
 
   if [ "$result" = "$input" ]; then
-    pass "Test 6: File with no privacy tags passes through unchanged"
+    pass "Test 5: File with no privacy tags passes through unchanged"
   else
-    fail "Test 6: File with no privacy tags should pass through unchanged"
+    fail "Test 5: File with no privacy tags should pass through unchanged"
     echo "  Input length: ${#input}"
     echo "  Result length: ${#result}"
   fi
 }
 
 # ---------------------------------------------------------------------------
-# Test 7: Multiple <private> blocks are all stripped
+# Test 6: Multiple <private> blocks are all stripped
 # ---------------------------------------------------------------------------
 test_multiple_private_blocks() {
   local input
@@ -217,18 +191,18 @@ EOF
      ! echo "$result" | grep -q "sk-aaa111" && \
      ! echo "$result" | grep -q "sk-bbb222" && \
      ! echo "$result" | grep -q "sec-bbb333"; then
-    pass "Test 7: Multiple <private> blocks are all stripped"
+    pass "Test 6: Multiple <private> blocks are all stripped"
   else
-    fail "Test 7: Multiple <private> blocks should all be stripped"
+    fail "Test 6: Multiple <private> blocks should all be stripped"
     echo "  Got: $result"
   fi
 }
 
 # ---------------------------------------------------------------------------
-# Test 8: is_file_private rejects private: true in body text (no front matter)
+# Test 7: is_file_private rejects private: true in body text (no front matter)
 # ---------------------------------------------------------------------------
 test_is_file_private_body_false_positive() {
-  local sample="$TMPDIR_TEST/test8_no_frontmatter.md"
+  local sample="$TMPDIR_TEST/test7_no_frontmatter.md"
   cat > "$sample" <<'EOF'
 # Regular Document
 
@@ -238,13 +212,13 @@ This should NOT be detected as private.
 EOF
 
   if ! is_file_private "$sample"; then
-    pass "Test 8: is_file_private rejects private: true in body (no front matter)"
+    pass "Test 7: is_file_private rejects private: true in body (no front matter)"
   else
-    fail "Test 8: is_file_private should reject private: true without front matter delimiters"
+    fail "Test 7: is_file_private should reject private: true without front matter delimiters"
   fi
 
   # Also test: private: true in body AFTER valid front matter
-  local sample2="$TMPDIR_TEST/test8_body_text.md"
+  local sample2="$TMPDIR_TEST/test7_body_text.md"
   cat > "$sample2" <<'EOF'
 ---
 title: Normal File
@@ -255,17 +229,17 @@ This is just body text, not a front matter field.
 EOF
 
   if ! is_file_private "$sample2"; then
-    pass "Test 8b: is_file_private rejects private: true in body after front matter"
+    pass "Test 7b: is_file_private rejects private: true in body after front matter"
   else
-    fail "Test 8b: is_file_private should reject private: true in body text"
+    fail "Test 7b: is_file_private should reject private: true in body text"
   fi
 }
 
 # ---------------------------------------------------------------------------
-# Test 9: is_file_private rejects partial match (private: trueish)
+# Test 8: is_file_private rejects partial match (private: trueish)
 # ---------------------------------------------------------------------------
 test_is_file_private_partial_match() {
-  local sample="$TMPDIR_TEST/test9.md"
+  local sample="$TMPDIR_TEST/test8.md"
   cat > "$sample" <<'EOF'
 ---
 private: trueish
@@ -274,9 +248,9 @@ private: trueish
 EOF
 
   if ! is_file_private "$sample"; then
-    pass "Test 9: is_file_private rejects partial match (private: trueish)"
+    pass "Test 8: is_file_private rejects partial match (private: trueish)"
   else
-    fail "Test 9: is_file_private should reject private: trueish"
+    fail "Test 8: is_file_private should reject private: trueish"
   fi
 }
 
@@ -287,7 +261,6 @@ echo "=== Phase 04: Privacy Tag Tests ==="
 echo ""
 
 test_strip_private_basic
-test_sed_bsd_compat
 test_is_file_private_true
 test_is_file_private_false
 test_code_fence_caller_responsibility

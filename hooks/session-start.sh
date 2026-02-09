@@ -39,12 +39,6 @@ validate_memory_dir() {
     return 0
 }
 
-# Privacy stripping — used by content injection (see Phase 05+ enhancements)
-# Source shared privacy functions from lib-privacy.sh
-HOOKS_DIR="$(cd "$(dirname "$0")" && pwd)"
-# shellcheck source=lib-privacy.sh
-. "$HOOKS_DIR/lib-privacy.sh"
-
 has_global=false
 has_project=false
 

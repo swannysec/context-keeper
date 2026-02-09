@@ -96,6 +96,27 @@ All 12 findings (2 Critical, 3 High, 7 Medium) fixed autonomously. Summary:
 **Estimated reduction:** ~29 lines across 3 files
 **Overall assessment:** Implementation is fundamentally sound. Core code (lib-privacy.sh) is 29 lines, well-tested, and correctly handles security-critical edge cases. Main issue is YAGNI violation where session-start.sh eagerly loads code it doesn't use.
 
+## Stage 6: Simplicity Fixes
+
+All 3 "should apply" findings fixed. Summary:
+
+### Fixes Applied
+- **S1** Removed dead `lib-privacy.sh` sourcing from `session-start.sh` — removed 5 lines (comment, HOOKS_DIR, shellcheck directive, source command, blank line). `lib-privacy.sh` is still sourced by the test suite, which is its only current consumer.
+- **S5** Removed redundant Test 2 (raw sed pattern test) — Test 1 exercises the identical sed pattern through `strip_private()`. Remaining tests renumbered 1–8 (was 1–9). Total tests: 9 (was 10).
+- **S7** Removed speculative `/memory-search` and `/memory-reflect` rows from schema enforcement table. Added single-line note: "Future code paths will enforce privacy tags when implemented."
+
+### Verification
+- Phase 04 tests: **9 passed, 0 failed**
+- Phase 03 tests (regression): **10 passed, 0 failed**
+- `session-start.sh` JSON output: **valid**
+
+### Lines Removed
+- `hooks/session-start.sh`: 5 lines removed
+- `tests/phase-04-privacy/test-privacy.sh`: 21 lines removed (test function + invocation), renumbered
+- `core/memory/schema.md`: 2 table rows replaced with 1-line note
+
+**Total reduction:** ~27 lines across 3 files
+
 ## Stage 7: Security Review
 *(pending)*
 

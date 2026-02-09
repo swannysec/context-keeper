@@ -432,9 +432,9 @@ Privacy tags are enforced at every automated code path:
 | Code Path | Behavior |
 |-----------|----------|
 | **SessionStart hook** | Strips `<private>` blocks before context injection; skips files with `private: true` |
-| **`/memory-search`** | Omits private block contents from search results; skips private files *(planned — Phase 05)* |
 | **`/memory-sync`** | Skips private content during analysis; never moves or references private content |
-| **`/memory-reflect`** | Skips private content during evidence gathering *(planned — Phase 08)* |
+
+Future code paths (`/memory-search`, `/memory-reflect`) will enforce privacy tags when implemented.
 
 ### Edge Cases
 
