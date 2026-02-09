@@ -12,7 +12,7 @@ This phase reviews the competitive feature matrix from Phase 1, selects the high
   - Confirm the final selection before proceeding
   - **Result:** User selected all 5 recommended features + Session Retrospection. Conducted detailed brainstorm/interview on all 6 features. User's existing `session-retrospective` skill (from robot-tools) will be folded into ConKeeper as `/memory-reflect`. Design decisions saved to `Working/Feature-Design-Decisions.md`. Key decisions: agent-first output design, ripgrep auto-detection, cross-platform shell script from day one, blended session-retro + claude-reflect approach, shared analysis core between correction detection and retrospection, sub-agent execution model for reflect.
 
-- [ ] For each selected feature, create a detailed implementation plan:
+- [x] For each selected feature, create a detailed implementation plan:
   - Read ConKeeper's existing architecture: `plugin.json`, `hooks/hooks.json`, skill files, hook scripts
   - For each feature, document:
     - **What it does** — user-facing behavior description
@@ -24,6 +24,7 @@ This phase reviews the competitive feature matrix from Phase 1, selects the high
     - **Risk assessment** — what could go wrong, backward compatibility concerns
   - Save the complete plan to `/Users/swanny/zed/context-keeper/Auto Run Docs/Initiation/Working/Implementation-Plan.md`
   - Structure the plan so each feature maps cleanly to one Phase (3, 4, 5...) in the execution documents
+  - **Result:** Complete implementation plan created covering all 6 features mapped to Phases 03–08. Reviewed entire architecture: 3 hook scripts, 4 skill files, 7 core templates, schema, snippet, plugin.json, hooks.json, and platform adapters across 6 platforms. Each feature section documents: user-facing behavior, specific file paths (create/modify), technical approach with data flow, zero-dependency design, platform impact, token budget impact, risk assessment with mitigations, and test expectations. Dependency order: Categories (03) → Privacy (04) → Search (05) → Observations (06) → Corrections (07) → Retrospection (08). Version bumps: v0.5.0 through v1.0.0.
 
 - [ ] Create execution phase documents (Phase 03, 04, etc.) for each selected feature:
   - Each feature gets its own Phase document in `/Users/swanny/zed/context-keeper/Auto Run Docs/Initiation/`
