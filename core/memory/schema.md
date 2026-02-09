@@ -353,13 +353,18 @@ For user-defined tags beyond the standard categories, use the `@tag` prefix:
 <!-- @tag: third-party -->
 ```
 
+### Validation Rules
+
+- Tag values must match: `[a-z][a-z0-9-]*` (lowercase, alphanumeric, hyphens only)
+- `@category` values must be from the defined sets above (memory or retrospective)
+- `@tag` values are freeform but should follow the same character pattern
+- One tag per line, maximum 80 characters per tag line
+- Category tags inside `<private>` blocks (Phase 04) are subject to the same privacy enforcement as the content they annotate
+
 ### Placement Rules
 
-- One tag per line
 - Multiple tags are allowed on separate consecutive lines
-- Tags go immediately after the entry (heading or bullet) they categorize
-- Tags are additive-only — memory files work normally without any tags
-- Omitting tags has no effect on functionality; they enhance search only
+- Tags are additive-only — files work normally without any tags
 
 ### Searching by Category
 
@@ -369,14 +374,8 @@ Tags are plain text inside HTML comments, so standard search tools find them:
 # Find all decisions across memory files
 rg '@category: decision' .claude/memory/
 
-# Find all bugfixes
-grep '@category: bugfix' .claude/memory/*.md
-
 # Find freeform tags
 rg '@tag: payments' .claude/memory/
-
-# Count entries by category
-rg -c '@category: pattern' .claude/memory/
 ```
 
 ## Token Budget Guidelines

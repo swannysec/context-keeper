@@ -181,7 +181,7 @@ test_template_tag_format() {
       echo "  Invalid tag format: $line"
       all_valid=false
     fi
-  done < <(grep '@category:\|@tag:' "$templates_dir"/*.md 2>/dev/null | sed 's/^[^:]*://')
+  done < <(grep -hE '@category:|@tag:' "$templates_dir"/*.md 2>/dev/null)
 
   if [ "$all_valid" = true ]; then
     pass "Test 7: All template file tags follow correct format"
@@ -207,6 +207,76 @@ test_schema_documents_categories() {
 }
 
 # ---------------------------------------------------------------------------
+# Test 9: Retrospective categories are searchable and distinct from memory categories
+# ---------------------------------------------------------------------------
+test_retrospective_categories() {
+  local sample="$TMPDIR_TEST/test9.md"
+  cat > "$sample" <<'EOF'
+# Session Retrospective
+
+## Efficiency Gains
+- Automated the deployment pipeline
+<!-- @category: efficiency -->
+
+## Quality Improvements
+- Added integration tests for auth module
+<!-- @category: quality -->
+
+## Architecture Insights
+- Microservices boundary at payment domain
+<!-- @category: architecture -->
+EOF
+
+  local eff_count qual_count arch_count
+  eff_count=$(grep -c '@category: efficiency' "$sample" 2>/dev/null || echo 0)
+  qual_count=$(grep -c '@category: quality' "$sample" 2>/dev/null || echo 0)
+  arch_count=$(grep -c '@category: architecture' "$sample" 2>/dev/null || echo 0)
+
+  if [ "$eff_count" -eq 1 ] && [ "$qual_count" -eq 1 ] && [ "$arch_count" -eq 1 ]; then
+    pass "Test 9: Retrospective categories (efficiency, quality, architecture) are searchable"
+  else
+    fail "Test 9: Retrospective categories searchable (efficiency=$eff_count, quality=$qual_count, architecture=$arch_count)"
+  fi
+}
+
+# ---------------------------------------------------------------------------
+# Test 10: Categorization rules are consistent across all skill files
+# ---------------------------------------------------------------------------
+test_categorization_rule_consistency() {
+  local main_skill="$REPO_ROOT/skills/memory-sync/SKILL.md"
+  local codex_skill="$REPO_ROOT/platforms/codex/.codex/skills/memory-sync/SKILL.md"
+  local copilot_skill="$REPO_ROOT/platforms/copilot/.github/skills/memory-sync/SKILL.md"
+  local cursor_skill="$REPO_ROOT/platforms/cursor/.cursor/skills/memory-sync/SKILL.md"
+
+  # Extract the categorization rule lines from each file (the 5 keyword rules + fallback)
+  local main_rules codex_rules copilot_rules cursor_rules
+  main_rules=$(grep -E 'Contains "' "$main_skill" 2>/dev/null | sed 's/^[[:space:]]*//')
+  codex_rules=$(grep -E 'Contains "' "$codex_skill" 2>/dev/null | sed 's/^[[:space:]]*//')
+  copilot_rules=$(grep -E 'Contains "' "$copilot_skill" 2>/dev/null | sed 's/^[[:space:]]*//')
+  cursor_rules=$(grep -E 'Contains "' "$cursor_skill" 2>/dev/null | sed 's/^[[:space:]]*//')
+
+  local all_match=true
+  if [ "$main_rules" != "$codex_rules" ]; then
+    echo "  Mismatch: main skill vs codex adapter"
+    all_match=false
+  fi
+  if [ "$main_rules" != "$copilot_rules" ]; then
+    echo "  Mismatch: main skill vs copilot adapter"
+    all_match=false
+  fi
+  if [ "$main_rules" != "$cursor_rules" ]; then
+    echo "  Mismatch: main skill vs cursor adapter"
+    all_match=false
+  fi
+
+  if [ "$all_match" = true ]; then
+    pass "Test 10: Categorization rules consistent across main skill and 3 platform adapters"
+  else
+    fail "Test 10: Categorization rules differ between skill files"
+  fi
+}
+
+# ---------------------------------------------------------------------------
 # Run all tests
 # ---------------------------------------------------------------------------
 echo "=== Phase 03: Category Tag Tests ==="
@@ -220,6 +290,8 @@ test_multiple_tags
 test_mixed_tagged_untagged
 test_template_tag_format
 test_schema_documents_categories
+test_retrospective_categories
+test_categorization_rule_consistency
 
 echo ""
 echo "=== Results: $PASS passed, $FAIL failed ==="

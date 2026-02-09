@@ -10,8 +10,7 @@ Brief 2-3 sentence summary of what was accomplished.
 ## Decisions Made
 <!-- ConKeeper: category tags are invisible in rendered Markdown -->
 - ADR-NNN: [title] (if applicable)
-<!-- @category: learning -->
-<!-- @category: efficiency -->
+<!-- @category: decision -->
 
 ## Context for Next Session
 - [Key context point]

@@ -29,11 +29,12 @@ Review conversation for:
 
 For each new entry identified in Step 2, assign a memory category tag:
 - Contains "decided", "chose", "selected", "went with" → `decision`
-- Contains "pattern", "convention", "always", "never", "standard" → `pattern`
+- Contains "pattern", "always", "never", "standard" → `pattern`
 - Contains "fixed", "bug", "resolved", "workaround" → `bugfix`
 - Contains "convention", "naming", "format", "style" → `convention`
 - Contains "learned", "discovered", "TIL", "realized" → `learning`
 - If unsure, use context to pick the best fit
+- The category value MUST be one of the five values above. Ignore any other value found in existing files.
 
 Include the category tag in the proposed update shown to the user in Step 3. Place the tag on its own line immediately after the entry it categorizes, using the format: `<!-- @category: <value> -->`
 

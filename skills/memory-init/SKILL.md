@@ -172,12 +172,13 @@ If any memory files already contain entries (e.g., reset scenario or migration f
 
 **If yes:** Read each memory file and classify each entry or section heading using these keyword matching rules:
 
-- Contains "decided", "chose", "selected", "went with" → `<!-- @category: decision -->`
-- Contains "pattern", "convention", "always", "never", "standard" → `<!-- @category: pattern -->`
-- Contains "fixed", "bug", "resolved", "workaround" → `<!-- @category: bugfix -->`
-- Contains "convention", "naming", "format", "style" → `<!-- @category: convention -->`
-- Contains "learned", "discovered", "TIL", "realized" → `<!-- @category: learning -->`
+- Contains "decided", "chose", "selected", "went with" → `decision`
+- Contains "pattern", "always", "never", "standard" → `pattern`
+- Contains "fixed", "bug", "resolved", "workaround" → `bugfix`
+- Contains "convention", "naming", "format", "style" → `convention`
+- Contains "learned", "discovered", "TIL", "realized" → `learning`
 - If unsure, use context to pick the best fit
+- The category value MUST be one of the five values above. Ignore any other value found in existing files.
 
 Place each tag on its own line immediately after the entry it categorizes. Show the proposed tags to the user before applying, then apply on confirmation.
 
