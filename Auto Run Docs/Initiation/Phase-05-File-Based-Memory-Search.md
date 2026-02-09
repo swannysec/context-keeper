@@ -1,13 +1,15 @@
 # Phase 05: File-Based Memory Search (`/memory-search`)
 
+**Agent Persona:** CLI Tools Developer — Focus on cross-platform shell scripting, ripgrep/grep compatibility, output formatting.
 **Version Bump:** v0.6.0 → v0.7.0
 **Dependency:** Phase 03 (Categories) for `--category` filtering. Phase 04 (Privacy) for private content exclusion. Both must be complete.
+**Orchestration Reference:** See `Working/Agent-Orchestration-Plan.md` for review persona prompts and sub-agent dispatch instructions.
 
 This phase adds a `/memory-search <query>` skill backed by a standalone cross-platform shell script. The search returns agent-optimized structured results grouped by file, with context and category tags. The shell script is directly callable from any platform.
 
 ## Tasks
 
-- [ ] Create the standalone search shell script (`tools/memory-search.sh`):
+- [x] Create the standalone search shell script (`tools/memory-search.sh`):
   - Create directory: `mkdir -p tools`
   - Create `tools/memory-search.sh` with `#!/usr/bin/env bash` and `set -euo pipefail`
   - Add error trap: `trap 'echo "[ConKeeper] memory-search.sh failed at line $LINENO" >&2; exit 0' ERR`
@@ -127,3 +129,27 @@ This phase adds a `/memory-search <query>` skill backed by a standalone cross-pl
   - Run Phase 05 tests (search)
   - Verify session-start.sh still produces valid JSON output
   - Commit all changes with message: `feat: add /memory-search skill with cross-platform shell script (v0.7.0)`
+
+## Review & Validation
+
+Review stages use dedicated agent types. Agent fixes findings autonomously unless they would change design intent or functionality. All review summaries are written to `Auto Run Docs/Initiation/Working/review-logs/phase-05-review-summary.md`. See `Working/Agent-Orchestration-Plan.md` Section 3 for full review prompt templates.
+
+- [ ] Stage 1 — Run tests: Execute `bash tests/phase-05-search/test-search.sh`, `bash tests/phase-04-privacy/test-privacy.sh`, and `bash tests/phase-03-categories/test-categories.sh` (regression). All tests must pass. Fix any failures before proceeding.
+
+- [ ] Stage 2 — Parallel code and architecture review: Launch two sub-agents in parallel. Sub-Agent A: `subagent_type: "workflow-toolkit:code-reviewer"` — review `tools/memory-search.sh`, `skills/memory-search/SKILL.md`, and all modified files for correctness, Bash 3.2 compat (critical — new shell script), cross-platform grep/rg behavior, argument parsing edge cases, error handling, test coverage of privacy and category filtering, output format consistency. Sub-Agent B: `subagent_type: "compound-engineering:review:architecture-strategist"` — review schema consistency (search output format vs schema docs), cross-platform portability (all 6 platforms), privacy enforcement completeness (two-pass approach vs fallback), token budget impact of search reminder in session-start, platform adapter consistency, naming conventions. Both output findings as Critical/High/Medium/Low.
+
+- [ ] Stage 3 — Synthesize review findings: Read both outputs. Deduplicate. Create consolidated list. Write summary to review log.
+
+- [ ] Stage 4 — Fix code and architecture findings: Fix all Critical, High, and Medium findings autonomously (escalate if design-changing). Re-run all test suites after fixes.
+
+- [ ] Stage 5 — Simplicity review: Launch one sub-agent: `subagent_type: "compound-engineering:review:code-simplicity-reviewer"` — review post-fix `tools/memory-search.sh` for over-engineering in the two-pass privacy filtering, argument parsing, and output formatting logic.
+
+- [ ] Stage 6 — Fix simplicity findings + test: Fix all "should apply" findings autonomously. Re-run all tests. Write simplicity summary to review log.
+
+- [ ] Stage 7 — Parallel security review (BLOCKED until Stage 6 complete and tests pass): Launch two sub-agents in parallel. CRITICAL: Do NOT start until Stage 6 is fully complete. Sub-Agent C: `subagent_type: "compound-engineering:review:security-sentinel"` (architecture focus) — review trust boundaries for user-supplied search queries, privacy enforcement in the two-pass approach (can crafted file content bypass private block detection?), data flow from search results (could results expose private content?), file system trust (path traversal via `--global` flag or symlinks). Sub-Agent D: `subagent_type: "compound-engineering:review:security-sentinel"` (technical focus) — review for command injection via search query (proper quoting when passed to grep/rg?), grep/rg regex injection, path traversal in directory construction, race conditions in privacy block detection, argument parsing bypass. Command injection and privacy bypass findings are Critical by default.
+
+- [ ] Stage 8 — Synthesize security findings: Read both outputs. Deduplicate. Create consolidated list. Write security summary to review log.
+
+- [ ] Stage 9 — Fix security findings: Fix all Critical, High, and Medium findings autonomously (escalate if design-changing). Add security tests where applicable.
+
+- [ ] Stage 10 — Final verification: Run all test suites (phases 03-05). All must pass. Verify `plugin.json` version is `"0.7.0"`. Verify `session-start.sh` produces valid JSON. Verify `tools/memory-search.sh` is executable. Write final status to review log. Commit any remaining fixes.
