@@ -1,13 +1,15 @@
 # Phase 03: Memory Observation Categories
 
+**Agent Persona:** Schema Designer — Focus on data format design, template consistency, cross-platform portability.
 **Version Bump:** v0.4.1 → v0.5.0
 **Dependency:** None — this is the foundation feature. Category tags are consumed by search (Phase 05), sync routing (Phase 07), and reflect categorization (Phase 08).
+**Orchestration Reference:** See `Working/Agent-Orchestration-Plan.md` for review persona prompts and sub-agent dispatch instructions.
 
 This phase adds inline category tags to memory file entries using HTML comment syntax. Tags are invisible in rendered Markdown but trivially parseable by grep/ripgrep, enabling structured filtering across all downstream features.
 
 ## Tasks
 
-- [ ] Add Category Tags section to the memory schema (`core/memory/schema.md`):
+- [x] Add Category Tags section to the memory schema (`core/memory/schema.md`):
   - Insert a new `## Category Tags` section after the existing `## Configuration File (Optional)` section and before `## Token Budget Guidelines`
   - Document the tag format: `<!-- @category: <value> -->` placed on its own line immediately after the heading or bullet it categorizes
   - Document the two distinct category sets:
@@ -76,3 +78,27 @@ This phase adds inline category tags to memory file entries using HTML comment s
   - Run any existing test suites to verify backward compatibility
   - Verify a memory file without any category tags still loads and functions correctly (no regression)
   - Commit all changes with message: `feat: add memory observation categories (v0.5.0)`
+
+## Review & Validation
+
+Review stages use dedicated agent types. Agent fixes findings autonomously unless they would change design intent or functionality. All review summaries are written to `Auto Run Docs/Initiation/Working/review-logs/phase-03-review-summary.md`. See `Working/Agent-Orchestration-Plan.md` Section 3 for full review prompt templates.
+
+- [ ] Stage 1 — Run tests: Execute `bash tests/phase-03-categories/test-categories.sh`. All tests must pass. Fix any failures before proceeding.
+
+- [ ] Stage 2 — Parallel code and architecture review: Launch two sub-agents in parallel using the Task tool. Sub-Agent A: `subagent_type: "workflow-toolkit:code-reviewer"` — review all files for correctness, Bash 3.2 compat, readability, DRY, test coverage, error handling, regressions, code style consistency. Sub-Agent B: `subagent_type: "compound-engineering:review:architecture-strategist"` — review for schema consistency with `core/memory/schema.md`, cross-platform portability, dependency chain integrity, token budget impact, configuration backward compatibility, platform adapter consistency, naming conventions. Both output findings as Critical/High/Medium/Low.
+
+- [ ] Stage 3 — Synthesize review findings: Read both sub-agent outputs. Deduplicate. Create consolidated list with unique IDs grouped by severity. Write summary to review log.
+
+- [ ] Stage 4 — Fix code and architecture findings: Fix all Critical, High, and Medium findings autonomously (escalate to user only if fix changes design intent). Re-run `bash tests/phase-03-categories/test-categories.sh` after fixes.
+
+- [ ] Stage 5 — Simplicity review: Launch one sub-agent: `subagent_type: "compound-engineering:review:code-simplicity-reviewer"` — review post-fix code for over-engineering, YAGNI violations, unnecessary abstractions. Do not suggest removing planned functionality.
+
+- [ ] Stage 6 — Fix simplicity findings + test: Fix all "should apply" simplicity findings autonomously. Re-run `bash tests/phase-03-categories/test-categories.sh`. Write simplicity summary to review log.
+
+- [ ] Stage 7 — Parallel security review (BLOCKED until Stage 6 complete and tests pass): Launch two sub-agents in parallel. CRITICAL: Do NOT start until Stage 6 is fully complete. Sub-Agent C: `subagent_type: "compound-engineering:review:security-sentinel"` (architecture focus) — review trust boundaries, privacy enforcement readiness (ensure no patterns preclude Phase 04 privacy tags), data flow safety, fail-open guarantees, configuration safety, file system trust, information disclosure. Sub-Agent D: `subagent_type: "compound-engineering:review:security-sentinel"` (technical focus) — review for command injection, path traversal, sed/grep injection via category values, YAML/JSON parsing safety, symlink attacks, race conditions, DoS vectors. Both output findings as Critical/High/Medium/Low.
+
+- [ ] Stage 8 — Synthesize security findings: Read both outputs. Deduplicate. Create consolidated list. Write security summary to review log.
+
+- [ ] Stage 9 — Fix security findings: Fix all Critical, High, and Medium security findings autonomously (escalate if design-changing). Add security-specific tests where applicable.
+
+- [ ] Stage 10 — Final verification: Run `bash tests/phase-03-categories/test-categories.sh`. All tests must pass. Verify `plugin.json` version is `"0.5.0"`. Write final status to review log. Commit any remaining fixes with message: `fix: address review findings for Phase 03`

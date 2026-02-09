@@ -295,6 +295,90 @@ These settings control ConKeeper's automatic context preservation hooks, which t
 | Individual ADR | 300-500 | 400-600 | 500-800 | 700-1000 |
 | Session summary | 200-400 | 400-700 | 600-1000 | 900-1500 |
 
+## Category Tags
+
+Category tags enable structured filtering and search across memory files. Tags use HTML comment syntax so they are invisible in rendered Markdown but trivially parseable by grep or ripgrep.
+
+### Tag Format
+
+Tags are placed on their own line immediately after the heading or bullet they categorize:
+
+```markdown
+- Decided to use PostgreSQL over SQLite for multi-user support
+<!-- @category: decision -->
+```
+
+### Memory Categories
+
+Use these categories for entries in memory files (`active-context.md`, `patterns.md`, `sessions/`, `decisions/`):
+
+| Category | Use For |
+|----------|---------|
+| `decision` | Choices made: tool selection, architecture direction, tradeoffs |
+| `pattern` | Recurring code or architecture patterns discovered |
+| `bugfix` | Bugs found and their fixes or workarounds |
+| `convention` | Naming standards, formatting rules, style preferences |
+| `learning` | New knowledge gained: TILs, discoveries, realizations |
+
+Example:
+
+```markdown
+## Code Conventions
+- Always use snake_case for Ruby method names
+<!-- @category: convention -->
+- Error handlers return Result objects, never raise
+<!-- @category: pattern -->
+```
+
+### Retrospective Categories
+
+Use these categories for `/memory-reflect` output (session retrospection analysis):
+
+| Category | Use For |
+|----------|---------|
+| `efficiency` | Process speed, automation, reduced friction |
+| `quality` | Code quality, fewer bugs, better testing |
+| `ux` | Developer experience, ergonomics, usability |
+| `knowledge` | Understanding gained, context built |
+| `architecture` | Structural decisions, system design insights |
+
+### Freeform Tags
+
+For user-defined tags beyond the standard categories, use the `@tag` prefix:
+
+```markdown
+- Integrated Stripe payment processing
+<!-- @category: decision -->
+<!-- @tag: payments -->
+<!-- @tag: third-party -->
+```
+
+### Placement Rules
+
+- One tag per line
+- Multiple tags are allowed on separate consecutive lines
+- Tags go immediately after the entry (heading or bullet) they categorize
+- Tags are additive-only — memory files work normally without any tags
+- Omitting tags has no effect on functionality; they enhance search only
+
+### Searching by Category
+
+Tags are plain text inside HTML comments, so standard search tools find them:
+
+```bash
+# Find all decisions across memory files
+rg '@category: decision' .claude/memory/
+
+# Find all bugfixes
+grep '@category: bugfix' .claude/memory/*.md
+
+# Find freeform tags
+rg '@tag: payments' .claude/memory/
+
+# Count entries by category
+rg -c '@category: pattern' .claude/memory/
+```
+
 ## Token Budget Guidelines
 
 Memory files should be concise to fit within context windows. The default preset is `standard` (~4000 tokens total). See **Token Budget Presets** above for per-file limits.
