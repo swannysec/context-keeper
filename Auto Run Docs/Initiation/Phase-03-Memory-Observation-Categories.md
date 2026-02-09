@@ -73,7 +73,7 @@ This phase adds inline category tags to memory file entries using HTML comment s
   - **Test 6:** Create a sample memory file with mixed tagged and untagged entries; verify grep counts match expected tagged-only count
   - All tests should be runnable via `bash tests/phase-03-categories/test-categories.sh` and output PASS/FAIL per test
 
-- [ ] Bump version to v0.5.0 in `plugin.json` and verify no existing tests break:
+- [x] Bump version to v0.5.0 in `plugin.json` and verify no existing tests break:
   - Edit `plugin.json`: change `"version": "0.4.1"` to `"version": "0.5.0"`
   - Run any existing test suites to verify backward compatibility
   - Verify a memory file without any category tags still loads and functions correctly (no regression)
