@@ -59,6 +59,7 @@ For non-trivial tasks, load relevant memory before starting work:
 - Read product-context.md and active-context.md for project context
 - Check progress.md for task status
 - Review decisions/ for architectural context
+- Search memory with /memory-search <query> before re-investigating known problems
 
 Update memory when:
 - Making significant architectural decisions (add to decisions/)

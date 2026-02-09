@@ -80,13 +80,14 @@ This phase adds a `/memory-search <query>` skill backed by a standalone cross-pl
     /memory-search --category decision "database"
     ```
 
-- [ ] Modify `hooks/session-start.sh` to inject search reminder into context:
+- [x] Modify `hooks/session-start.sh` to inject search reminder into context:
   - In the context message block (around line 57-69), add a new line in the "For non-trivial tasks" guidance:
     ```
     - Search memory with /memory-search <query> before re-investigating known problems
     ```
   - Add it after the existing "Review decisions/ for architectural context" line
   - Keep it concise — this adds ~15 tokens to the session-start context
+  - ✅ Added at line 62. JSON output validated.
 
 - [ ] Update `core/snippet.md` to include `/memory-search` in available workflows:
   - In all three snippet variants (append, create new, manual copy), add to the **Available Workflows** list:
