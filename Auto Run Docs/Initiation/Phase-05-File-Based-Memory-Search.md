@@ -58,7 +58,7 @@ This phase adds a `/memory-search <query>` skill backed by a standalone cross-pl
   - Make the script executable: `chmod +x tools/memory-search.sh`
   - **Bash 3.2 compatibility:** No `mapfile`, no associative arrays, no `$EPOCHSECONDS`, no `\b` in regex. Use `while read` loops and POSIX grep flags only.
 
-- [ ] Create the `/memory-search` skill definition (`skills/memory-search/SKILL.md`):
+- [x] Create the `/memory-search` skill definition (`skills/memory-search/SKILL.md`):
   - Create directory: `mkdir -p skills/memory-search`
   - Create `skills/memory-search/SKILL.md` with YAML front matter:
     ```yaml
