@@ -289,64 +289,39 @@ test_grep_fallback() {
   mkdir -p "$workdir"
   setup_project_memory "$workdir"
 
-  # Create a wrapper directory with a fake PATH that hides rg
-  local fake_bin="$TMPDIR_TEST/test7_bin"
-  mkdir -p "$fake_bin"
-
-  # Create a script that shadows rg to make it appear unavailable
-  cat > "$fake_bin/rg" <<'SCRIPT'
-#!/usr/bin/env bash
-# Fake rg that always fails — simulates rg not being installed
-exit 127
-SCRIPT
-  chmod +x "$fake_bin/rg"
-
   cd "$workdir"
-  # Run with modified PATH where our fake rg comes first (and fails command -v check)
-  # Actually, to truly hide rg, we need PATH without it. Build a clean PATH.
-  local clean_path=""
-  local IFS_SAVE="$IFS"
-  IFS=":"
-  for p in $PATH; do
-    if [ -x "$p/grep" ] || [ -x "$p/bash" ] || [ -x "$p/find" ] || \
-       [ -x "$p/head" ] || [ -x "$p/awk" ] || [ -x "$p/sed" ] || \
-       [ -x "$p/cut" ] || [ -x "$p/tr" ] || [ -x "$p/mktemp" ] || \
-       [ -x "$p/touch" ] || [ -x "$p/stat" ] || [ -x "$p/date" ]; then
-      # Keep this path segment but only if it doesn't contain rg
-      if [ ! -x "$p/rg" ]; then
-        if [ -n "$clean_path" ]; then
-          clean_path="$clean_path:$p"
-        else
-          clean_path="$p"
-        fi
-      else
-        # This segment has rg — include it but prepend our fake_bin which shadows rg
-        if [ -n "$clean_path" ]; then
-          clean_path="$clean_path:$p"
-        else
-          clean_path="$p"
-        fi
-      fi
+
+  # Build a PATH that excludes the directory containing rg
+  local rg_path new_path
+  rg_path=$(command -v rg 2>/dev/null) || true
+  if [ -n "$rg_path" ]; then
+    local rg_dir
+    rg_dir=$(dirname "$rg_path")
+    # Remove rg's directory from PATH (exact match)
+    new_path=$(printf '%s' "$PATH" | tr ':' '\n' | grep -v "^${rg_dir}$" | tr '\n' ':' | sed 's/:$//')
+
+    local result
+    result=$(PATH="$new_path" bash "$REPO_ROOT/tools/memory-search.sh" "token budget" 2>/dev/null) || true
+
+    if echo "$result" | grep -q '## Results for:' && \
+       echo "$result" | grep -q 'token budget'; then
+      pass "Test 7: Search works on current platform (grep fallback forced)"
+    else
+      fail "Test 7: Search should work with grep fallback"
+      echo "  Got: $result"
     fi
-  done
-  IFS="$IFS_SAVE"
-
-  # Simplification: just remove rg from accessible path by prepending a dir
-  # where 'rg' doesn't exist as a valid command
-  # Use env to override PATH — exclude rg directories entirely is fragile,
-  # so instead we test that the script produces valid output regardless.
-  # The key insight: the output format is identical whether rg or grep is used.
-  local result
-  result=$(bash "$REPO_ROOT/tools/memory-search.sh" "token budget" 2>/dev/null) || true
-
-  # If we can verify the script works with the current search engine, that's the test.
-  # The real portability test is that both codepaths produce structured output.
-  if echo "$result" | grep -q '## Results for:' && \
-     echo "$result" | grep -q 'token budget'; then
-    pass "Test 7: Search works on current platform ($(command -v rg >/dev/null 2>&1 && echo 'ripgrep' || echo 'grep') detected)"
   else
-    fail "Test 7: Search should work on current platform"
-    echo "  Got: $result"
+    # rg not installed — the script is already using grep
+    local result
+    result=$(bash "$REPO_ROOT/tools/memory-search.sh" "token budget" 2>/dev/null) || true
+
+    if echo "$result" | grep -q '## Results for:' && \
+       echo "$result" | grep -q 'token budget'; then
+      pass "Test 7: Search works on current platform (grep native, rg not installed)"
+    else
+      fail "Test 7: Search should work with grep"
+      echo "  Got: $result"
+    fi
   fi
   cd "$ORIG_DIR"
 }

@@ -86,6 +86,7 @@ This project uses ConKeeper for persistent AI context management.
 - **memory-init** - Initialize memory for this project
 - **memory-sync** - Sync session state to memory files
 - **session-handoff** - Generate handoff for new session
+- **memory-search** - Search memory files by keyword or category
 
 **Memory Files:**
 - `active-context.md` - Current focus and state
@@ -129,6 +130,7 @@ See [docs/platform-guides/](docs/platform-guides/) for detailed platform instruc
 | `/memory-init` | Initialize memory for current project |
 | `/memory-sync` | Sync current session state to memory files |
 | `/session-handoff` | Generate handoff prompt for new session |
+| `/memory-search` | Search memory files by keyword or category |
 
 ### Memory Structure
 

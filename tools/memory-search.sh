@@ -5,6 +5,8 @@
 
 set -euo pipefail
 
+# ERR trap exits 0 so runtime failures degrade gracefully in hook contexts.
+# Argument validation errors (below) still exit 1 for immediate feedback.
 trap 'echo "[ConKeeper] memory-search.sh failed at line $LINENO" >&2; exit 0' ERR
 
 # ---------------------------------------------------------------------------
@@ -26,12 +28,16 @@ while [ $# -gt 0 ]; do
             shift
             ;;
         --category)
-            if [ $# -lt 2 ]; then
-                echo "Error: --category requires a value" >&2
+            if [ $# -lt 2 ] || [ -z "$2" ]; then
+                echo "Error: --category requires a non-empty value" >&2
                 exit 1
             fi
             CATEGORY_FILTER="$2"
             shift 2
+            ;;
+        --)
+            shift
+            break
             ;;
         -*)
             echo "Error: Unknown option: $1" >&2
@@ -49,6 +55,12 @@ while [ $# -gt 0 ]; do
     esac
 done
 
+# Handle remaining positional args after --
+if [ $# -gt 0 ] && [ -z "$QUERY" ]; then
+    QUERY="$1"
+    shift
+fi
+
 if [ -z "$QUERY" ]; then
     echo "Usage: memory-search.sh <query> [--global] [--sessions] [--category <name>]" >&2
     exit 1
@@ -64,7 +76,7 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# Build search paths
+# Build search paths (newline-delimited to support paths with spaces)
 # ---------------------------------------------------------------------------
 SEARCH_DIRS=""
 SCOPE_DESC="project memory"
@@ -76,7 +88,12 @@ fi
 
 if [ "$INCLUDE_GLOBAL" = true ]; then
     if [ -d "$HOME/.claude/memory" ]; then
-        SEARCH_DIRS="$SEARCH_DIRS $HOME/.claude/memory"
+        if [ -n "$SEARCH_DIRS" ]; then
+            SEARCH_DIRS="$SEARCH_DIRS
+$HOME/.claude/memory"
+        else
+            SEARCH_DIRS="$HOME/.claude/memory"
+        fi
         SCOPE_DESC="$SCOPE_DESC + global memory"
     fi
 fi
@@ -84,9 +101,6 @@ fi
 if [ "$INCLUDE_SESSIONS" = true ]; then
     SCOPE_DESC="$SCOPE_DESC + sessions"
 fi
-
-# Trim leading space
-SEARCH_DIRS="$(echo "$SEARCH_DIRS" | sed 's/^ //')"
 
 if [ -z "$SEARCH_DIRS" ]; then
     echo "No results found for \"$QUERY\" in $SCOPE_DESC."
@@ -119,7 +133,8 @@ collect_files() {
 }
 
 FILES=""
-for dir in $SEARCH_DIRS; do
+while IFS= read -r dir; do
+    [ -z "$dir" ] && continue
     dir_files=$(collect_files "$dir" "$INCLUDE_SESSIONS")
     if [ -n "$dir_files" ]; then
         if [ -n "$FILES" ]; then
@@ -129,7 +144,9 @@ $dir_files"
             FILES="$dir_files"
         fi
     fi
-done
+done <<EOF_DIRS
+$SEARCH_DIRS
+EOF_DIRS
 
 if [ -z "$FILES" ]; then
     echo "No results found for \"$QUERY\" in $SCOPE_DESC."
@@ -138,81 +155,22 @@ if [ -z "$FILES" ]; then
 fi
 
 # ---------------------------------------------------------------------------
-# Privacy enforcement: is_file_private (check YAML front matter)
+# Privacy enforcement: source shared library for is_file_private()
 # ---------------------------------------------------------------------------
-is_file_private() {
-    local file="$1"
-    local first_line
-    first_line=$(head -1 "$file" | sed 's/^\xef\xbb\xbf//' | tr -d '\r')
-    if [ "$first_line" != "---" ]; then
-        return 1
-    fi
-    awk 'NR>1 && NR<=20 { if (/^---/) exit; print }' "$file" | tr -d '\r' | grep -qi '^private: *["'"'"']\{0,1\}true["'"'"']\{0,1\}[[:space:]]*$' && return 0
-    return 1
-}
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+. "$SCRIPT_DIR/../hooks/lib-privacy.sh"
 
 # ---------------------------------------------------------------------------
 # Privacy enforcement: get private block line ranges for a file
 # Returns pairs of start:end line numbers (inclusive) for <private> blocks.
 # If a <private> has no closing tag, end is set to a very large number.
 # ---------------------------------------------------------------------------
-get_private_ranges() {
-    local file="$1"
-    local start_lines end_lines
-    start_lines=$(grep -n '^[[:space:]]*<private>' "$file" 2>/dev/null | cut -d: -f1)
-    end_lines=$(grep -n '^[[:space:]]*</private>' "$file" 2>/dev/null | cut -d: -f1)
-
-    if [ -z "$start_lines" ]; then
-        return
-    fi
-
-    # Pair up start/end lines. Use while-read for Bash 3.2 compat.
-    local starts_arr=""
-    local ends_arr=""
-    local i=0
-    while IFS= read -r line; do
-        starts_arr="$starts_arr $line"
-        i=$((i + 1))
-    done <<EOF_STARTS
-$start_lines
-EOF_STARTS
-
-    i=0
-    while IFS= read -r line; do
-        ends_arr="$ends_arr $line"
-        i=$((i + 1))
-    done <<EOF_ENDS
-$end_lines
-EOF_ENDS
-
-    # Trim leading space
-    starts_arr="$(echo "$starts_arr" | sed 's/^ //')"
-    ends_arr="$(echo "$ends_arr" | sed 's/^ //')"
-
-    # Match starts with ends sequentially
-    local remaining_ends="$ends_arr"
-    for s in $starts_arr; do
-        local matched_end=""
-        local new_remaining=""
-        local found=false
-        for e in $remaining_ends; do
-            if [ "$found" = false ] && [ "$e" -ge "$s" ]; then
-                matched_end="$e"
-                found=true
-            else
-                if [ -n "$new_remaining" ]; then
-                    new_remaining="$new_remaining $e"
-                else
-                    new_remaining="$e"
-                fi
-            fi
-        done
-        if [ -z "$matched_end" ]; then
-            matched_end=999999
-        fi
-        echo "$s:$matched_end"
-        remaining_ends="$new_remaining"
-    done
+# Accept file content from stdin to avoid TOCTOU race (read file once, use for both
+# privacy range detection and search matching).
+get_private_ranges_from_stdin() {
+    awk '/^[[:space:]]*<private>/ { if (!start) start=NR }
+         /^[[:space:]]*<\/private>/ { if (start) { print start":"NR; start=0 } }
+         END { if (start) print start":999999" }'
 }
 
 # Check if a line number falls within any private range
@@ -239,7 +197,7 @@ is_line_private() {
 # Category filtering: check if a match has a nearby category tag
 # ---------------------------------------------------------------------------
 has_nearby_category() {
-    local file="$1"
+    local content="$1"
     local match_line="$2"
     local category="$3"
 
@@ -249,8 +207,8 @@ has_nearby_category() {
         start=1
     fi
 
-    # Extract nearby lines and check for category tag
-    awk -v s="$start" -v e="$end" 'NR>=s && NR<=e' "$file" | grep -q "<!-- @category: $category -->" && return 0
+    # Extract nearby lines and check for category tag (use -F for literal match)
+    printf '%s\n' "$content" | awk -v s="$start" -v e="$end" 'NR>=s && NR<=e' | grep -qF "<!-- @category: $category -->" && return 0
     return 1
 }
 
@@ -269,15 +227,18 @@ while IFS= read -r filepath; do
         continue
     fi
 
-    # Get private block ranges for this file
-    private_ranges=$(get_private_ranges "$filepath")
+    # Read file once to avoid TOCTOU race (SEC-1: same snapshot for privacy + search)
+    file_content=$(cat "$filepath" 2>/dev/null) || continue
 
-    # Run search on this file
+    # Get private block ranges from the snapshot
+    private_ranges=$(printf '%s\n' "$file_content" | get_private_ranges_from_stdin)
+
+    # Run search on the snapshot (not the file, to prevent race)
     matches=""
     if [ "$SEARCH_CMD" = "rg" ]; then
-        matches=$(rg -n --no-heading -F -- "$QUERY" "$filepath" 2>/dev/null) || true
+        matches=$(printf '%s\n' "$file_content" | rg -n --no-heading -F -- "$QUERY" 2>/dev/null) || true
     else
-        matches=$(grep -n -F -- "$QUERY" "$filepath" 2>/dev/null) || true
+        matches=$(printf '%s\n' "$file_content" | grep -n -F -- "$QUERY" 2>/dev/null) || true
     fi
 
     if [ -z "$matches" ]; then
@@ -307,20 +268,21 @@ while IFS= read -r filepath; do
 
         # Category check: if --category specified, verify nearby tag
         if [ -n "$CATEGORY_FILTER" ]; then
-            if ! has_nearby_category "$filepath" "$local_line_num" "$CATEGORY_FILTER"; then
+            if ! has_nearby_category "$file_content" "$local_line_num" "$CATEGORY_FILTER"; then
                 continue
             fi
         fi
 
         file_match_count=$((file_match_count + 1))
 
-        # Find the nearest category tag above the match (within 3 lines) for display
+        # Find the nearest category tag near the match (within 3 lines above/below) for display
         local_cat_tag=""
         local_cat_start=$((local_line_num - 3))
         if [ "$local_cat_start" -lt 1 ]; then
             local_cat_start=1
         fi
-        local_cat_tag=$(awk -v s="$local_cat_start" -v e="$local_line_num" 'NR>=s && NR<=e' "$filepath" 2>/dev/null | grep '<!-- @category:' | tail -1) || true
+        local_cat_end=$((local_line_num + 3))
+        local_cat_tag=$(printf '%s\n' "$file_content" | awk -v s="$local_cat_start" -v e="$local_cat_end" 'NR>=s && NR<=e' | grep '<!-- @category:' | tail -1) || true
 
         if [ -n "$local_cat_tag" ]; then
             file_output="$file_output
