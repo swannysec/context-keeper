@@ -22,6 +22,8 @@ This document defines the standard format for ConKeeper memory files. Implementa
     └── YYYY-MM-DD-topic.md
 ```
 
+Use `/memory-search <query>` to find entries across memory files. Supports `--global` for cross-project search and `--sessions` to include session files.
+
 ## Global Memory (Optional)
 
 Global memory at `~/.claude/memory/` stores cross-project preferences. This is outside the scope of this schema but may include:
@@ -380,7 +382,17 @@ For user-defined tags beyond the standard categories, use the `@tag` prefix:
 
 ### Searching by Category
 
-Tags are plain text inside HTML comments, so standard search tools find them:
+Categories are searchable via `/memory-search --category <name>`:
+
+```bash
+# Find all decisions via the search skill
+/memory-search --category decision "database"
+
+# Find all conventions
+/memory-search --category convention "naming"
+```
+
+Tags are also plain text inside HTML comments, so standard search tools find them:
 
 ```bash
 # Find all decisions across memory files
@@ -435,8 +447,9 @@ Privacy tags are enforced at every automated code path:
 |-----------|----------|
 | **SessionStart hook** | Strips `<private>` blocks before context injection; skips files with `private: true` |
 | **`/memory-sync`** | Skips private content during analysis; never moves or references private content |
+| **`/memory-search`** | Two-pass privacy filtering: excludes matches within `<private>` blocks; skips files with `private: true` |
 
-Future code paths (`/memory-search`, `/memory-reflect`) will enforce privacy tags when implemented.
+Future code paths (`/memory-reflect`) will enforce privacy tags when implemented.
 
 ### Edge Cases
 

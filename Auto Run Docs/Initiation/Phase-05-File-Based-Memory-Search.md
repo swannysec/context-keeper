@@ -97,9 +97,10 @@ This phase adds a `/memory-search <query>` skill backed by a standalone cross-pl
   - Add it after the existing `session-handoff` entry
   - ✅ Added to all 3 snippet variants (lines 25, 63, 96).
 
-- [ ] Update `core/memory/schema.md` to reference search capability:
+- [x] Update `core/memory/schema.md` to reference search capability:
   - In the main directory structure section, add a note: "Use `/memory-search <query>` to find entries across memory files"
   - In the Category Tags section (added in Phase 03), add: "Categories are searchable via `/memory-search --category <name>`"
+  - ✅ Added search note after directory structure (line 25). Updated "Searching by Category" section to lead with `/memory-search --category` examples (lines 383-393). Also updated Enforcement Points table to move `/memory-search` from "future" to implemented (line 450).
 
 - [ ] Update platform adapters to reference the search script:
   - `platforms/codex/.codex/skills/`: Create `memory-search/SKILL.md` mirroring the Claude Code skill but referencing the script path as `tools/memory-search.sh` relative to the ConKeeper install
