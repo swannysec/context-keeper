@@ -63,7 +63,7 @@ This phase adds inline category tags to memory file entries using HTML comment s
   - `platforms/zed/rules-library/memory-sync.md`: Add categorization guidance in the sync workflow section
   - Verify each platform adapter's sync workflow matches the Claude Code skill's categorization logic
 
-- [ ] Write tests for category tag functionality:
+- [x] Write tests for category tag functionality:
   - Create a test script or test cases document at `tests/phase-03-categories/` (create directory)
   - **Test 1:** Verify `<!-- @category: decision -->` is invisible in rendered Markdown output (use a Markdown renderer or verify the tag is a valid HTML comment)
   - **Test 2:** Verify `rg '@category: decision'` finds tagged entries in a sample memory file
