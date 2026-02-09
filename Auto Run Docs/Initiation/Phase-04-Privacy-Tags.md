@@ -112,7 +112,8 @@ This phase adds `<private>...</private>` block wrappers for sensitive content in
 
 Review stages use dedicated agent types. Agent fixes findings autonomously unless they would change design intent or functionality. All review summaries are written to `Auto Run Docs/Initiation/Working/review-logs/phase-04-review-summary.md`. See `Working/Agent-Orchestration-Plan.md` Section 3 for full review prompt templates.
 
-- [ ] Stage 1 — Run tests: Execute `bash tests/phase-04-privacy/test-privacy.sh` and `bash tests/phase-03-categories/test-categories.sh` (regression). All tests must pass. Fix any failures before proceeding.
+- [x] Stage 1 — Run tests: Execute `bash tests/phase-04-privacy/test-privacy.sh` and `bash tests/phase-03-categories/test-categories.sh` (regression). All tests must pass. Fix any failures before proceeding.
+  - **Result:** All 7 Phase 04 privacy tests passed. All 10 Phase 03 category tests passed (regression clean). No fixes needed.
 
 - [ ] Stage 2 — Parallel code and architecture review: Launch two sub-agents in parallel. Sub-Agent A: `subagent_type: "workflow-toolkit:code-reviewer"` — review all files for correctness, Bash 3.2 compat (especially sed patterns — must work on BSD sed macOS AND GNU sed Linux), error handling, test coverage, edge cases (nested private tags, tags in code fences, empty blocks), consistency with existing hook code style. Sub-Agent B: `subagent_type: "compound-engineering:review:architecture-strategist"` — review for schema consistency, cross-platform portability (privacy stripping on all platforms with hooks), dependency chain (privacy enforced before Phase 05+), token budget impact (should be zero or negative), platform adapter consistency, backwards compatibility. Both output findings as Critical/High/Medium/Low.
 
