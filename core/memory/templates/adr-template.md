@@ -1,4 +1,6 @@
 # ADR-NNN: [Title]
+<!-- @category: decision -->
+<!-- ConKeeper: category tags are invisible in rendered Markdown -->
 
 **Status:** Proposed | Accepted | Deprecated | Superseded by ADR-XXX
 **Date:** [YYYY-MM-DD]

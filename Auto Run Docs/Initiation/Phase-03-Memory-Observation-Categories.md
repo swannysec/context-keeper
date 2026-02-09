@@ -21,7 +21,7 @@ This phase adds inline category tags to memory file entries using HTML comment s
   - Add a `### Searching by Category` subsection noting: `rg '@category: decision'` or `grep '@category: decision'` finds tagged entries
   - Verify the section renders correctly (tags invisible in Markdown preview)
 
-- [ ] Update all 7 core memory templates with category tag examples:
+- [x] Update all 7 core memory templates with category tag examples:
   - `core/memory/templates/active-context.md`: Add `<!-- @category: decision -->` example after the "Recent Decisions" bullet format
   - `core/memory/templates/patterns.md`: Add `<!-- @category: pattern -->` and `<!-- @category: convention -->` examples in the Code Conventions and Architecture Patterns sections
   - `core/memory/templates/adr-template.md`: Add `<!-- @category: decision -->` on its own line after the `# ADR-NNN: Title` heading
