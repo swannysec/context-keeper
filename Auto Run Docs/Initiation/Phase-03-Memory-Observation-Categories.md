@@ -56,7 +56,7 @@ This phase adds inline category tags to memory file entries using HTML comment s
   - If no: Skip — no tags added. Files continue to work normally.
   - This step is opt-in only. Never auto-tag without asking.
 
-- [ ] Update platform adapter memory-sync workflows to include categorization:
+- [x] Update platform adapter memory-sync workflows to include categorization:
   - `platforms/codex/.codex/skills/memory-sync/SKILL.md`: Add the same Step 2.5 auto-categorization instructions
   - `platforms/copilot/.github/skills/memory-sync/SKILL.md`: Add the same Step 2.5 auto-categorization instructions
   - `platforms/cursor/.cursor/skills/memory-sync/SKILL.md`: Add the same Step 2.5 auto-categorization instructions
