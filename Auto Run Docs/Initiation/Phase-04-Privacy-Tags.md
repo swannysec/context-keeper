@@ -1,13 +1,15 @@
 # Phase 04: Privacy Tags
 
+**Agent Persona:** Privacy Engineer — Focus on enforcement guarantees, edge cases, sed/grep compatibility, fail-safe defaults.
 **Version Bump:** v0.5.0 → v0.6.0
 **Dependency:** Phase 03 (Categories) should be complete. Privacy enforcement must be in place before any new read/write paths (search, observations, reflect) ship.
+**Orchestration Reference:** See `Working/Agent-Orchestration-Plan.md` for review persona prompts and sub-agent dispatch instructions.
 
 This phase adds `<private>...</private>` block wrappers for sensitive content in memory files. Content inside privacy tags is excluded from context injection, search results, sync analysis, and reflection. Also supports file-level privacy via `private: true` in YAML front matter.
 
 ## Tasks
 
-- [ ] Add Privacy Tags section to the memory schema (`core/memory/schema.md`):
+- [x] Add Privacy Tags section to the memory schema (`core/memory/schema.md`):
   - Insert a new `## Privacy Tags` section after the `## Category Tags` section added in Phase 03
   - Document the block-level format: `<private>` and `</private>` on their own lines, content between them is excluded from all automated processing
   - Document that tags are **visible** to humans editing the file (intentional — privacy should be obvious)
@@ -104,3 +106,27 @@ This phase adds `<private>...</private>` block wrappers for sensitive content in
   - Run Phase 04 tests
   - Verify a memory file without any privacy tags works identically to before (no regression)
   - Commit all changes with message: `feat: add privacy tags for sensitive memory content (v0.6.0)`
+
+## Review & Validation
+
+Review stages use dedicated agent types. Agent fixes findings autonomously unless they would change design intent or functionality. All review summaries are written to `Auto Run Docs/Initiation/Working/review-logs/phase-04-review-summary.md`. See `Working/Agent-Orchestration-Plan.md` Section 3 for full review prompt templates.
+
+- [ ] Stage 1 — Run tests: Execute `bash tests/phase-04-privacy/test-privacy.sh` and `bash tests/phase-03-categories/test-categories.sh` (regression). All tests must pass. Fix any failures before proceeding.
+
+- [ ] Stage 2 — Parallel code and architecture review: Launch two sub-agents in parallel. Sub-Agent A: `subagent_type: "workflow-toolkit:code-reviewer"` — review all files for correctness, Bash 3.2 compat (especially sed patterns — must work on BSD sed macOS AND GNU sed Linux), error handling, test coverage, edge cases (nested private tags, tags in code fences, empty blocks), consistency with existing hook code style. Sub-Agent B: `subagent_type: "compound-engineering:review:architecture-strategist"` — review for schema consistency, cross-platform portability (privacy stripping on all platforms with hooks), dependency chain (privacy enforced before Phase 05+), token budget impact (should be zero or negative), platform adapter consistency, backwards compatibility. Both output findings as Critical/High/Medium/Low.
+
+- [ ] Stage 3 — Synthesize review findings: Read both outputs. Deduplicate. Create consolidated list. Write summary to review log.
+
+- [ ] Stage 4 — Fix code and architecture findings: Fix all Critical, High, and Medium findings autonomously (escalate if design-changing). Re-run `bash tests/phase-04-privacy/test-privacy.sh` and `bash tests/phase-03-categories/test-categories.sh` after fixes.
+
+- [ ] Stage 5 — Simplicity review: Launch one sub-agent: `subagent_type: "compound-engineering:review:code-simplicity-reviewer"` — review post-fix code for over-engineering, YAGNI violations, unnecessary abstractions in the privacy stripping functions and enforcement logic.
+
+- [ ] Stage 6 — Fix simplicity findings + test: Fix all "should apply" findings autonomously. Re-run all tests. Write simplicity summary to review log.
+
+- [ ] Stage 7 — Parallel security review (BLOCKED until Stage 6 complete and tests pass): Launch two sub-agents in parallel. CRITICAL: Do NOT start until Stage 6 is fully complete. Sub-Agent C: `subagent_type: "compound-engineering:review:security-sentinel"` (architecture focus) — privacy is the core concern: review enforcement completeness across ALL code paths, data flow for potential privacy leaks, trust boundaries for user-created memory files, sed stripping bypass vectors. Sub-Agent D: `subagent_type: "compound-engineering:review:security-sentinel"` (technical focus) — review sed patterns for regex injection via crafted `<private>` content, POSIX sed compatibility, TOCTOU race conditions in privacy checking, symlink safety in file-level privacy, malformed YAML front matter bypassing `private: true` detection. Privacy bypass findings are Critical by default.
+
+- [ ] Stage 8 — Synthesize security findings: Read both outputs. Deduplicate. Create consolidated list. Write security summary to review log.
+
+- [ ] Stage 9 — Fix security findings: Fix all Critical, High, and Medium findings autonomously (escalate if design-changing). Add security-specific tests.
+
+- [ ] Stage 10 — Final verification: Run `bash tests/phase-04-privacy/test-privacy.sh` and `bash tests/phase-03-categories/test-categories.sh`. All must pass. Verify `plugin.json` version is `"0.6.0"`. Verify `hooks/hooks.json` is valid JSON. Verify `session-start.sh` produces valid JSON. Write final status to review log. Commit any remaining fixes.

@@ -378,6 +378,77 @@ rg '@category: decision' .claude/memory/
 rg '@tag: payments' .claude/memory/
 ```
 
+## Privacy Tags
+
+Privacy tags allow marking sensitive content in memory files so it is excluded from all automated processing (context injection, search, sync, reflection) while remaining visible to humans editing the file.
+
+### Block-Level Privacy
+
+Wrap sensitive content in `<private>` and `</private>` tags, each on its own line:
+
+```markdown
+## API Configuration
+- Production endpoint: https://api.example.com/v2
+<private>
+- API key: sk-proj-abc123...
+- Webhook secret: whsec_xyz789...
+</private>
+- Rate limit: 1000 req/min
+```
+
+Content between the tags is excluded from all automated processing. The tags themselves are **visible** to humans editing the file — privacy should be obvious, not hidden.
+
+### File-Level Privacy
+
+Add `private: true` to a memory file's YAML front matter to mark the entire file as private:
+
+```yaml
+---
+private: true
+---
+# Sensitive Credentials
+
+This entire file is excluded from automated processing.
+```
+
+This is a per-file setting added to individual memory files, not a global configuration option.
+
+### Enforcement Points
+
+Privacy tags are enforced at every automated code path:
+
+| Code Path | Behavior |
+|-----------|----------|
+| **SessionStart hook** | Strips `<private>` blocks before context injection; skips files with `private: true` |
+| **`/memory-search`** | Omits private block contents from search results; skips private files |
+| **`/memory-sync`** | Skips private content during analysis; never moves or references private content |
+| **`/memory-reflect`** | Skips private content during evidence gathering |
+
+### Edge Cases
+
+- **Nesting:** NOT supported. If `<private>` tags appear inside an already-open `<private>` block, the outer tag wins and inner tags are treated as plain content. Do not nest `<private>` blocks.
+- **Code fences:** Tags inside code fences (indented 4+ spaces or wrapped in triple backticks) are NOT processed. Only `<private>` at line start with optional leading whitespace is recognized as a privacy tag.
+- **Empty blocks:** `<private></private>` (on separate lines) is valid and means nothing is hidden.
+- **Category tags inside private blocks:** Category tags within `<private>` blocks are subject to the same privacy enforcement as the content they annotate — they will not appear in search results or be processed by automation.
+
+### Example: Patterns File with Private Content
+
+```markdown
+# Project Patterns
+
+## API Integration
+- All external calls use retry with exponential backoff
+<!-- @category: pattern -->
+<private>
+- Internal API key for staging: sk-test-abc123 (rotate quarterly)
+<!-- @category: convention -->
+</private>
+- Timeout set to 30s for all HTTP clients
+<!-- @category: convention -->
+```
+
+In this example, the staging API key and its category tag are excluded from all automated processing. The surrounding public patterns remain visible and searchable.
+
 ## Token Budget Guidelines
 
 Memory files should be concise to fit within context windows. The default preset is `standard` (~4000 tokens total). See **Token Budget Presets** above for per-file limits.
