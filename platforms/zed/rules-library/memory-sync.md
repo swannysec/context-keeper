@@ -10,6 +10,10 @@ Synchronize current session state to memory files.
    - Check `.claude/memory/decisions/` for recent ADRs
 
 2. **Analyze This Session**
+   **Privacy:** When analyzing memory files, skip any content within `<private>...</private>` blocks.
+   Do not reference, move, or modify private content. Do not include private content in sync summaries.
+   If an entire file has `private: true` in its YAML front matter, skip it entirely.
+
    Review conversation for:
    - Decisions made (architectural, tooling, implementation)
    - Tasks completed or started

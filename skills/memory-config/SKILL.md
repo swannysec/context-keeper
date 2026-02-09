@@ -78,6 +78,13 @@ context_window_tokens: 200000
 ---
 ```
 
+## Privacy Tags
+
+Privacy tags are always enforced — there is no configuration toggle.
+- Wrap sensitive content in `<private>...</private>` tags
+- Add `private: true` to YAML front matter for entire-file privacy
+- Private content is excluded from context injection, search, sync, and reflection
+
 ### Step 5: Confirm
 
 > Configuration updated.

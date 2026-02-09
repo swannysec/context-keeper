@@ -18,6 +18,10 @@ Read current memory files:
 
 ### Step 2: Analyze Session
 
+**Privacy:** When analyzing memory files, skip any content within `<private>...</private>` blocks.
+Do not reference, move, or modify private content. Do not include private content in sync summaries.
+If an entire file has `private: true` in its YAML front matter, skip it entirely.
+
 Review conversation for:
 - Decisions made (architectural, implementation, tooling)
 - Tasks completed or started

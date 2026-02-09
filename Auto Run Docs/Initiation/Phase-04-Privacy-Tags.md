@@ -33,7 +33,7 @@ This phase adds `<private>...</private>` block wrappers for sensitive content in
   - Other templates: no changes needed (session files and progress files rarely contain sensitive content)
   - **Done:** Verified glossary.md, session-template.md, and progress.md correctly excluded (no sensitive content sections).
 
-- [ ] Modify `hooks/session-start.sh` to strip private content before context injection:
+- [x] Modify `hooks/session-start.sh` to strip private content before context injection:
   - After reading memory files for context injection (around line 49 where `context` is built), add privacy stripping
   - Implementation approach:
     1. Before building the context message, define a `strip_private()` function:
@@ -58,7 +58,7 @@ This phase adds `<private>...</private>` block wrappers for sensitive content in
   - **Important:** The current session-start.sh does NOT read individual memory file contents — it only checks for directory existence and injects a static message. The privacy stripping function should be added as infrastructure for when content injection is added in future phases, and documented with a comment: `# Privacy stripping — used by content injection (see Phase 05+ enhancements)`
   - If session-start.sh currently has no content injection path, add the functions but don't call them yet. They'll be consumed by Phase 05 (search) and Phase 06 (observations).
 
-- [ ] Update `/memory-sync` skill to respect privacy tags:
+- [x] Update `/memory-sync` skill to respect privacy tags:
   - Edit `skills/memory-sync/SKILL.md`
   - Add a privacy notice at the top of Step 2 (Analyze Session):
     ```
@@ -68,7 +68,7 @@ This phase adds `<private>...</private>` block wrappers for sensitive content in
     ```
   - This is instruction-level enforcement (the LLM follows these rules during sync)
 
-- [ ] Update `/memory-config` skill to document privacy tags:
+- [x] Update `/memory-config` skill to document privacy tags:
   - Edit `skills/memory-config/SKILL.md`
   - Add a section under the existing configuration documentation:
     ```
@@ -80,11 +80,11 @@ This phase adds `<private>...</private>` block wrappers for sensitive content in
     - Private content is excluded from context injection, search, sync, and reflection
     ```
 
-- [ ] Document `.memory-config.md` front matter privacy field in schema:
+- [x] Document `.memory-config.md` front matter privacy field in schema:
   - In `core/memory/schema.md`, under the `.memory-config.md` section, add `private: true` as an optional field that can be added to any memory file's YAML front matter
   - Clarify this is a per-file setting (added to individual memory files), not a global config option
 
-- [ ] Write tests for privacy tag functionality:
+- [x] Write tests for privacy tag functionality:
   - Create `tests/phase-04-privacy/test-privacy.sh`
   - **Test 1:** Create a sample file with `<private>` blocks. Run `sed '/<private>/,/<\/private>/d'` and verify private content is stripped
   - **Test 2:** Verify the sed pattern works with BSD sed (macOS default) — run test on current platform
@@ -95,13 +95,13 @@ This phase adds `<private>...</private>` block wrappers for sensitive content in
   - **Test 7:** Create a file with multiple `<private>` blocks. Verify all blocks are stripped
   - All tests runnable via `bash tests/phase-04-privacy/test-privacy.sh`
 
-- [ ] Update platform adapter workflows to include privacy awareness:
+- [x] Update platform adapter workflows to include privacy awareness:
   - `platforms/codex/.codex/skills/memory-sync/SKILL.md`: Add the same privacy notice from the Claude Code sync skill
   - `platforms/copilot/.github/skills/memory-sync/SKILL.md`: Add same
   - `platforms/cursor/.cursor/skills/memory-sync/SKILL.md`: Add same
   - `platforms/zed/rules-library/memory-sync.md`: Add privacy guidance
 
-- [ ] Bump version to v0.6.0 in `plugin.json` and verify backward compatibility:
+- [x] Bump version to v0.6.0 in `plugin.json` and verify backward compatibility:
   - Edit `plugin.json`: change version to `"0.6.0"`
   - Run Phase 03 tests to verify categories still work
   - Run Phase 04 tests

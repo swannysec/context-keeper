@@ -256,6 +256,18 @@ context_window_tokens: 200000  # Total context window size in tokens
 
 This file is optional. If not present, defaults are used.
 
+### Per-File Privacy
+
+Any memory file can include `private: true` in its YAML front matter to mark the entire file as private:
+
+```yaml
+---
+private: true
+---
+```
+
+This is a per-file setting — add it to individual memory files that contain sensitive content. It is not a global configuration option in `.memory-config.md`. Files marked private are skipped entirely by context injection, search, sync, and reflection.
+
 ### Context Preservation Settings
 
 These settings control ConKeeper's automatic context preservation hooks, which trigger memory syncs before context window compaction.
