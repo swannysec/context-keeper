@@ -11,11 +11,12 @@ This phase conducts deep competitive analysis of 7 memory/context projects to id
   - Save raw notes to `/Users/swanny/zed/context-keeper/Auto Run Docs/Initiation/Working/claude-mem-notes.md`
   - **Completed 2026-02-09:** Comprehensive analysis saved. Key findings: SQLite+Chroma storage, 5 MCP search tools, PostToolUse observation capture, web viewer UI, progressive disclosure pattern, fail-open hook architecture. 26K+ stars, v9.1.1, TypeScript. Primary gap for ConKeeper: search capability and observation granularity.
 
-- [ ] Research MemOS, OpenMemory, and mcp-memory-service by fetching their GitHub READMEs and source:
+- [x] Research MemOS, OpenMemory, and mcp-memory-service by fetching their GitHub READMEs and source:
   - **MemOS** (https://github.com/MemTensor/MemOS): Focus on memory architecture patterns, API design, and any bot-focused features that could translate to coding assistants
   - **OpenMemory** (https://github.com/CaviraOSS/OpenMemory): Focus on memory storage, retrieval patterns, and multi-agent coordination
   - **mcp-memory-service** (https://github.com/doobidoo/mcp-memory-service): Focus on MCP integration patterns, tool definitions, and how memory is exposed via the Model Context Protocol
   - Save raw notes to `/Users/swanny/zed/context-keeper/Auto Run Docs/Initiation/Working/memos-openmemory-mcp-notes.md`
+  - **Completed 2026-02-09:** Comprehensive analysis of all three saved. Key findings: MemOS (5K stars, Python, 17 MCP tools, 3-tier memory with LoRA+KV-cache, Neo4j+Qdrant required, Skill Memory feature); OpenMemory (3.2K stars, TypeScript, 5 MCP tools, 5-sector cognitive model with decay, SQLite default, waypoint graph, temporal facts); mcp-memory-service (1.3K stars, Python, 13+ MCP tools, dream-inspired consolidation, hybrid BM25+vector search, knowledge graph with typed relationships, SQLite-vec). Cross-cutting themes: search is table-stakes (ConKeeper has none), memory categorization is universal, decay/aging is standard, all use MCP tools while ConKeeper uses hooks/skills.
 
 - [ ] Research basic-memory, memU, and claude-reflect by fetching their GitHub READMEs and source:
   - **basic-memory** (https://github.com/basicmachines-co/basic-memory): Focus on simplicity patterns, what they chose to include/exclude, and any clever design decisions
