@@ -25,7 +25,7 @@ This phase conducts deep competitive analysis of 7 memory/context projects to id
   - Save raw notes to `/Users/swanny/zed/context-keeper/Auto Run Docs/Initiation/Working/basicmem-memu-reflect-notes.md`
   - **Completed 2026-02-09:** Comprehensive analysis of all three saved. Key findings: basic-memory (~2.5K stars, Python, AGPL-3.0, 17+ MCP tools, Entity-Observation-Relation knowledge graph, SQLite+Postgres, bi-directional Markdown editing, Obsidian-compatible, memory:// URI scheme, 3 search modes); memU (~8.6K stars, Python+Rust, Apache 2.0, proactive 24/7 memory with auto-categorization, PostgreSQL+pgvector, dual RAG/LLM retrieval, 92% Locomo benchmark, vision support, token cost reduction focus — but no Claude Code integration, heavy infra); claude-reflect (660 stars, Python 3.6+, MIT, hybrid regex+semantic correction capture, confidence scoring 0.60-0.95, human-in-the-loop approval gate, skill discovery from patterns, multi-target sync to CLAUDE.md/AGENTS.md/skill files, semantic dedup, historical scanning — closest to ConKeeper's philosophy). Cross-cutting: search confirmed as #1 gap (5/5 competitors have it), correction capture + skill discovery are the strongest net-new feature candidates for ConKeeper, and claude-reflect is the most natural integration partner (same storage format, same philosophy, complementary features).
 
-- [ ] Read ConKeeper's current capabilities to establish the baseline for comparison:
+- [x] Read ConKeeper's current capabilities to establish the baseline for comparison:
   - Read the full README.md at `/Users/swanny/zed/context-keeper/README.md`
   - Read the memory schema at `/Users/swanny/zed/context-keeper/core/memory/schema.md`
   - Read all 4 skill files: `skills/memory-init/SKILL.md`, `skills/memory-sync/SKILL.md`, `skills/memory-config/SKILL.md`, `skills/session-handoff/SKILL.md`
@@ -33,6 +33,7 @@ This phase conducts deep competitive analysis of 7 memory/context projects to id
   - Read the hooks manifest: `hooks/hooks.json`
   - Compile a feature checklist of everything ConKeeper does today
   - Save to `/Users/swanny/zed/context-keeper/Auto Run Docs/Initiation/Working/conkeeper-baseline.md`
+  - **Completed 2026-02-09:** Comprehensive baseline saved. Read 12 source files (README.md, schema.md, 4 SKILL.md files, 3 hook scripts, hooks.json, plugin.json, install.sh). ConKeeper v0.4.1: file-based Markdown storage with no database, 7-file memory schema (v1.0.0), 4 slash commands (init/sync/config/handoff), 3 hooks with tiered context escalation (60%→auto-sync, 80%→hard-block, 90%→compaction), 6-platform support (broadest in market), YAML config with 7 settings, 4 token budget presets, security features (symlink validation, session ID sanitization, path traversal prevention). Feature checklist compiled with 37 present capabilities and 22 identified gaps. Top gaps confirmed: no search (any kind), no auto observation capture, no MCP tools, no memory categorization, no decay/aging, no session retrospection.
 
 - [ ] Build the competitive feature matrix document:
   - Create `/Users/swanny/zed/context-keeper/Auto Run Docs/Initiation/Working/Feature-Matrix.md`
