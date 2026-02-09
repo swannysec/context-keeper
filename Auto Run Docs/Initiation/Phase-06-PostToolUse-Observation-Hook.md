@@ -1,13 +1,15 @@
 # Phase 06: PostToolUse Observation Hook
 
+**Agent Persona:** Hook Systems Developer — Focus on JSON parsing, performance (<100ms), append-only safety, Bash 3.2 compat.
 **Version Bump:** v0.7.0 → v0.8.0
 **Dependency:** Phase 04 (Privacy) for awareness of privacy patterns. Phase 05 (Search) so observations can be searched via `--sessions`. No blocking dependency — observations are consumed by Phase 07 (Corrections) and Phase 08 (Retrospection).
+**Orchestration Reference:** See `Working/Agent-Orchestration-Plan.md` for review persona prompts and sub-agent dispatch instructions.
 
 This phase adds a `PostToolUse` hook that logs tool usage to a per-session observations file. Two-tier logging: full entries for Bash/external tools, stub entries for native Read/Write/Edit tools. Creates a real-time activity log for agent analysis and `/memory-reflect`.
 
 ## Tasks
 
-- [ ] Create the PostToolUse hook script (`hooks/post-tool-use.sh`):
+- [x] Create the PostToolUse hook script (`hooks/post-tool-use.sh`):
   - Create `hooks/post-tool-use.sh` with `#!/usr/bin/env bash` and `set -euo pipefail`
   - Add error trap matching existing hook pattern: `trap 'echo "[ConKeeper] post-tool-use.sh failed at line $LINENO" >&2; exit 0' ERR`
   - **Input parsing:** Read JSON from stdin (Claude Code PostToolUse hook provides):
@@ -61,7 +63,7 @@ This phase adds a `PostToolUse` hook that logs tool usage to a per-session obser
   - **Bash 3.2 compatibility:** No `mapfile`, no associative arrays, no `$EPOCHSECONDS`. Use `date +%H:%M:%S` for timestamps. Use case statements instead of associative arrays for action type mapping.
   - Make executable: `chmod +x hooks/post-tool-use.sh`
 
-- [ ] Register the PostToolUse hook in `hooks/hooks.json`:
+- [x] Register the PostToolUse hook in `hooks/hooks.json`:
   - Add a new `"PostToolUse"` entry to the `"hooks"` object, after the existing `"PreCompact"` entry:
     ```json
     "PostToolUse": [
@@ -78,7 +80,7 @@ This phase adds a `PostToolUse` hook that logs tool usage to a per-session obser
     ```
   - Verify the JSON is valid after editing (no trailing commas, proper nesting)
 
-- [ ] Modify `hooks/session-start.sh` to create the observations file at session start:
+- [x] Modify `hooks/session-start.sh` to create the observations file at session start:
   - After the existing memory directory detection (around line 43-46), add:
     ```bash
     # Create observations file for this session
@@ -101,7 +103,7 @@ This phase adds a `PostToolUse` hook that logs tool usage to a per-session obser
     ```
   - **Important:** Do NOT inject the observations file content into the session-start context message. It grows too large and is too noisy. It is consumed on-demand by `/memory-reflect` and `/memory-search --sessions`.
 
-- [ ] Update `/memory-config` skill to document observation settings:
+- [x] Update `/memory-config` skill to document observation settings:
   - Edit `skills/memory-config/SKILL.md`
   - Add new configuration options documentation:
     ```
@@ -117,7 +119,7 @@ This phase adds a `PostToolUse` hook that logs tool usage to a per-session obser
     - `off`: No observation logging (same as `observation_hook: false`)
     ```
 
-- [ ] Update `core/memory/schema.md` to document the observations file:
+- [x] Update `core/memory/schema.md` to document the observations file:
   - In the Directory Structure section, add the observations file to the sessions listing:
     ```
     └── sessions/            # Session summaries
@@ -134,14 +136,14 @@ This phase adds a `PostToolUse` hook that logs tool usage to a per-session obser
   - Document the observation entry format (full and stub variants)
   - Add a note about cleanup: "Observation files grow during a session. Old observation files can be safely deleted. They are not required for memory continuity."
 
-- [ ] Update `.memory-config.md` schema in `core/memory/schema.md`:
+- [x] Update `.memory-config.md` schema in `core/memory/schema.md`:
   - Add the new configuration fields to the `.memory-config.md` example:
     ```yaml
     observation_hook: true          # Enable/disable PostToolUse observation logging
     observation_detail: full        # full | stubs_only | off
     ```
 
-- [ ] Write tests for the PostToolUse observation hook:
+- [x] Write tests for the PostToolUse observation hook:
   - Create `tests/phase-06-observations/test-observations.sh`
   - **Setup:** Create a temporary directory with `.claude/memory/sessions/` structure and a mock `.memory-config.md`
   - **Test 1:** Feed valid PostToolUse JSON (Bash tool) to `post-tool-use.sh` via stdin. Verify a full entry is appended to the observations file.
@@ -157,7 +159,7 @@ This phase adds a `PostToolUse` hook that logs tool usage to a per-session obser
   - **Cleanup:** Remove temporary test directories
   - All tests runnable via `bash tests/phase-06-observations/test-observations.sh`
 
-- [ ] Bump version to v0.8.0 and verify all existing tests pass:
+- [x] Bump version to v0.8.0 and verify all existing tests pass:
   - Edit `plugin.json`: change version to `"0.8.0"`
   - Run Phase 03 tests (categories)
   - Run Phase 04 tests (privacy)
@@ -166,3 +168,27 @@ This phase adds a `PostToolUse` hook that logs tool usage to a per-session obser
   - Verify `hooks/hooks.json` is valid JSON
   - Verify `session-start.sh` still produces valid JSON output
   - Commit all changes with message: `feat: add PostToolUse observation hook for session logging (v0.8.0)`
+
+## Review & Validation
+
+Review stages use dedicated agent types. Agent fixes findings autonomously unless they would change design intent or functionality. All review summaries are written to `Auto Run Docs/Initiation/Working/review-logs/phase-06-review-summary.md`. See `Working/Agent-Orchestration-Plan.md` Section 3 for full review prompt templates.
+
+- [ ] Stage 1 — Run tests: Execute `bash tests/phase-06-observations/test-observations.sh` and all prior phase tests (03-05) for regression. All tests must pass. Fix any failures before proceeding.
+
+- [ ] Stage 2 — Parallel code and architecture review: Launch two sub-agents in parallel. Sub-Agent A: `subagent_type: "workflow-toolkit:code-reviewer"` — review `hooks/post-tool-use.sh` for correctness, Bash 3.2 compat (critical — new hook on hot path), JSON parsing robustness (malformed input, missing fields, jq absence), performance (<100ms), error handling (fail-open), entry format, config parsing, test coverage. Sub-Agent B: `subagent_type: "compound-engineering:review:architecture-strategist"` — review hook registration in `hooks/hooks.json` (valid JSON, no conflicts), session-start.sh modification safety, observation file growth implications, schema documentation, config option defaults and backward compat, whether observations are correctly excluded from session-start context. Both output findings as Critical/High/Medium/Low.
+
+- [ ] Stage 3 — Synthesize review findings: Read both outputs. Deduplicate. Create consolidated list. Write summary to review log.
+
+- [ ] Stage 4 — Fix code and architecture findings: Fix all Critical, High, and Medium findings autonomously (escalate if design-changing). Re-run all test suites (03-06) after fixes.
+
+- [ ] Stage 5 — Simplicity review: Launch one sub-agent: `subagent_type: "compound-engineering:review:code-simplicity-reviewer"` — review post-fix `hooks/post-tool-use.sh` for over-engineering in the entry classification, field extraction, and config parsing logic.
+
+- [ ] Stage 6 — Fix simplicity findings + test: Fix all "should apply" findings autonomously. Re-run all tests. Write simplicity summary to review log.
+
+- [ ] Stage 7 — Parallel security review (BLOCKED until Stage 6 complete and tests pass): Launch two sub-agents in parallel. CRITICAL: Do NOT start until Stage 6 is fully complete. Sub-Agent C: `subagent_type: "compound-engineering:review:security-sentinel"` (architecture focus) — review the PostToolUse hook's trust model (tool_name, tool_input, tool_output may contain malicious content), data flow from tool output to observation file (sensitive data leakage?), privacy enforcement (observations must never contain file content, only paths and metadata), fail-open safety. Sub-Agent D: `subagent_type: "compound-engineering:review:security-sentinel"` (technical focus) — review for command injection via tool_input/tool_output flowing into observation file (sanitization?), path traversal via crafted session_id or cwd, jq injection via malformed JSON, race conditions in concurrent file appends, symlink attacks on observation file, 5-second timeout enforcement. Data leakage and injection findings are Critical by default.
+
+- [ ] Stage 8 — Synthesize security findings: Read both outputs. Deduplicate. Create consolidated list. Write security summary to review log.
+
+- [ ] Stage 9 — Fix security findings: Fix all Critical, High, and Medium findings autonomously (escalate if design-changing). Add security tests.
+
+- [ ] Stage 10 — Final verification: Run all test suites (phases 03-06). All must pass. Verify `hooks/hooks.json` is valid JSON. Verify `session-start.sh` produces valid JSON. Verify `plugin.json` version is `"0.8.0"`. Write final status to review log. Commit any remaining fixes.

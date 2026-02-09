@@ -61,6 +61,8 @@ Check for `.claude/memory/.memory-config.md`:
 > 6. Auto-sync threshold
 > 7. Hard-block threshold
 > 8. Context window size
+> 9. Observation hook (enable/disable)
+> 10. Observation detail level
 
 ### Step 4: Apply Changes
 
@@ -75,8 +77,21 @@ output_style: normal
 auto_sync_threshold: 60
 hard_block_threshold: 80
 context_window_tokens: 200000
+observation_hook: true
+observation_detail: full
 ---
 ```
+
+## Observation Hook Settings
+
+| Setting | Default | Options | Description |
+|---------|---------|---------|-------------|
+| `observation_hook` | `true` | `true`, `false` | Enable/disable PostToolUse observation logging |
+| `observation_detail` | `full` | `full`, `stubs_only`, `off` | Detail level for observation entries |
+
+- `full`: Full entries for Bash/external tools, stub entries for native tools
+- `stubs_only`: Stub entries for all tools (timestamp, tool, type, path, status only)
+- `off`: No observation logging (same as `observation_hook: false`)
 
 ## Privacy Tags
 
