@@ -173,7 +173,11 @@ This phase adds a `PostToolUse` hook that logs tool usage to a per-session obser
 
 Review stages use dedicated agent types. Agent fixes findings autonomously unless they would change design intent or functionality. All review summaries are written to `Auto Run Docs/Initiation/Working/review-logs/phase-06-review-summary.md`. See `Working/Agent-Orchestration-Plan.md` Section 3 for full review prompt templates.
 
-- [ ] Stage 1 — Run tests: Execute `bash tests/phase-06-observations/test-observations.sh` and all prior phase tests (03-05) for regression. All tests must pass. Fix any failures before proceeding.
+- [x] Stage 1 — Run tests: Execute `bash tests/phase-06-observations/test-observations.sh` and all prior phase tests (03-05) for regression. All tests must pass. Fix any failures before proceeding.
+  - ✅ Phase 03 (categories): 10/10 passed
+  - ✅ Phase 04 (privacy): 13/13 passed
+  - ✅ Phase 05 (search): 11/11 passed
+  - ✅ Phase 06 (observations): 10/10 passed
 
 - [ ] Stage 2 — Parallel code and architecture review: Launch two sub-agents in parallel. Sub-Agent A: `subagent_type: "workflow-toolkit:code-reviewer"` — review `hooks/post-tool-use.sh` for correctness, Bash 3.2 compat (critical — new hook on hot path), JSON parsing robustness (malformed input, missing fields, jq absence), performance (<100ms), error handling (fail-open), entry format, config parsing, test coverage. Sub-Agent B: `subagent_type: "compound-engineering:review:architecture-strategist"` — review hook registration in `hooks/hooks.json` (valid JSON, no conflicts), session-start.sh modification safety, observation file growth implications, schema documentation, config option defaults and backward compat, whether observations are correctly excluded from session-start context. Both output findings as Critical/High/Medium/Low.
 
