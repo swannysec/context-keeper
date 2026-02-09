@@ -29,8 +29,9 @@ validate_memory_dir() {
         if command -v readlink &>/dev/null; then
             resolved=$(readlink -f "$dir" 2>/dev/null) || return 1
             # Ensure resolved path is under expected parent (prevent symlink escape)
+            # Use path-boundary check: require trailing / or exact match
             case "$resolved" in
-                "$expected_parent"*) return 0 ;;
+                "$expected_parent"/*|"$expected_parent") return 0 ;;
                 *) return 1 ;;  # Symlink points outside expected location
             esac
         fi

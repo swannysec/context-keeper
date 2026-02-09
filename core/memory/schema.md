@@ -410,6 +410,8 @@ Wrap sensitive content in `<private>` and `</private>` tags, each on its own lin
 
 Content between the tags is excluded from all automated processing. The tags themselves are **visible** to humans editing the file — privacy should be obvious, not hidden.
 
+**Tag format:** Tags must be exactly `<private>` and `</private>` — no attributes, spaces, or variations (e.g., `<private >` or `<Private>` will not be recognized). Optional leading whitespace is allowed.
+
 ### File-Level Privacy
 
 Add `private: true` to a memory file's YAML front matter to mark the entire file as private:
@@ -438,7 +440,7 @@ Future code paths (`/memory-search`, `/memory-reflect`) will enforce privacy tag
 
 ### Edge Cases
 
-- **Nesting:** NOT supported. If `<private>` tags appear inside an already-open `<private>` block, the outer tag wins and inner tags are treated as plain content. Do not nest `<private>` blocks.
+- **Nesting:** NOT supported. If `<private>` tags are nested, the first `</private>` encountered closes the range — any content between the first and second `</private>` will not be stripped. Do not nest `<private>` blocks.
 - **Code fences:** The `strip_private` function processes `<private>` tags regardless of code fence context. Callers that inject file content are responsible for excluding code-fenced blocks before piping through `strip_private`. In instruction-level enforcement (sync, reflect, search), the LLM is expected to recognize code fences and not treat documented examples as real privacy tags.
 - **Empty blocks:** `<private></private>` (on separate lines) is valid and means nothing is hidden.
 - **Unclosed blocks:** If a `<private>` tag has no matching `</private>`, all content from the opening tag to the end of the file is stripped. Always close your `<private>` blocks to avoid unintended data loss.

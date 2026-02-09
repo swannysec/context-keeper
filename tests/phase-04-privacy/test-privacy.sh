@@ -255,6 +255,98 @@ EOF
 }
 
 # ---------------------------------------------------------------------------
+# Test 9: is_file_private handles CRLF line endings (SEC-1)
+# ---------------------------------------------------------------------------
+test_is_file_private_crlf() {
+  local sample="$TMPDIR_TEST/test9_crlf.md"
+  printf '%s\r\n' "---" "private: true" "---" "SECRET CONTENT" > "$sample"
+
+  if is_file_private "$sample"; then
+    pass "Test 9: is_file_private handles CRLF line endings"
+  else
+    fail "Test 9: is_file_private should detect private: true with CRLF endings"
+  fi
+}
+
+# ---------------------------------------------------------------------------
+# Test 10: is_file_private handles capitalized and quoted values (SEC-2/SEC-3)
+# ---------------------------------------------------------------------------
+test_is_file_private_yaml_variants() {
+  local sample_cap="$TMPDIR_TEST/test10_cap.md"
+  cat > "$sample_cap" <<'EOF'
+---
+private: True
+---
+# Capitalized
+EOF
+
+  local sample_quoted="$TMPDIR_TEST/test10_quoted.md"
+  cat > "$sample_quoted" <<'EOF'
+---
+private: "true"
+---
+# Double-quoted
+EOF
+
+  local sample_squoted="$TMPDIR_TEST/test10_squoted.md"
+  printf '%s\n' "---" "private: 'true'" "---" "# Single-quoted" > "$sample_squoted"
+
+  local sub_pass=0
+  is_file_private "$sample_cap" && sub_pass=$((sub_pass + 1))
+  is_file_private "$sample_quoted" && sub_pass=$((sub_pass + 1))
+  is_file_private "$sample_squoted" && sub_pass=$((sub_pass + 1))
+
+  if [ "$sub_pass" -eq 3 ]; then
+    pass "Test 10: is_file_private accepts True, \"true\", and 'true' variants"
+  else
+    fail "Test 10: is_file_private should accept YAML boolean variants ($sub_pass/3 passed)"
+  fi
+}
+
+# ---------------------------------------------------------------------------
+# Test 11: is_file_private handles UTF-8 BOM (SEC-4)
+# ---------------------------------------------------------------------------
+test_is_file_private_bom() {
+  local sample="$TMPDIR_TEST/test11_bom.md"
+  printf '\xef\xbb\xbf---\nprivate: true\n---\nSECRET\n' > "$sample"
+
+  if is_file_private "$sample"; then
+    pass "Test 11: is_file_private handles UTF-8 BOM before front matter"
+  else
+    fail "Test 11: is_file_private should detect private: true despite BOM"
+  fi
+}
+
+# ---------------------------------------------------------------------------
+# Test 12: Unclosed <private> tag strips to EOF (SEC-7)
+# ---------------------------------------------------------------------------
+test_unclosed_private_tag() {
+  local input
+  input="$(cat <<'EOF'
+## Public Section 1
+Some public content
+<private>
+Secret data that starts
+More secret data
+## Public Section 2 (should be stripped - no closing tag)
+EOF
+)"
+
+  local result
+  result=$(printf '%s' "$input" | strip_private)
+
+  if echo "$result" | grep -q "Public Section 1" && \
+     echo "$result" | grep -q "Some public content" && \
+     ! echo "$result" | grep -q "Secret data" && \
+     ! echo "$result" | grep -q "Public Section 2"; then
+    pass "Test 12: Unclosed <private> tag strips to EOF (fail-safe)"
+  else
+    fail "Test 12: Unclosed <private> tag should strip everything to EOF"
+    echo "  Got: $result"
+  fi
+}
+
+# ---------------------------------------------------------------------------
 # Run all tests
 # ---------------------------------------------------------------------------
 echo "=== Phase 04: Privacy Tag Tests ==="
@@ -268,6 +360,10 @@ test_no_tags_passthrough
 test_multiple_private_blocks
 test_is_file_private_body_false_positive
 test_is_file_private_partial_match
+test_is_file_private_crlf
+test_is_file_private_yaml_variants
+test_is_file_private_bom
+test_unclosed_private_tag
 
 echo ""
 echo "=== Results: $PASS passed, $FAIL failed ==="
