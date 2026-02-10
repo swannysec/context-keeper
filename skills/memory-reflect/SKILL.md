@@ -5,7 +5,7 @@ description: Session retrospection using After Action Review methodology. Analyz
 
 # Memory Reflect — Session Retrospection
 
-7-phase After Action Review (AAR) workflow for extracting actionable improvements from the current session.
+6-phase After Action Review (AAR) workflow for extracting actionable improvements from the current session.
 
 ## Phase 1: Gather Evidence
 
@@ -29,10 +29,7 @@ Estimate session depth:
 - Count observation entries + correction entries + session file size
 - If facets data exists, also consider: friction count, satisfaction signals
 - If < 5 observations AND 0 corrections AND no facets friction → mark as LIGHTWEIGHT
-- Otherwise → map `reflect_depth` config to session depth:
-  - `minimal` → always use LIGHTWEIGHT depth regardless of activity level
-  - `standard` → use STANDARD depth
-  - `thorough` → use THOROUGH depth
+- Otherwise → use STANDARD depth
 
 **Privacy:** Skip any content within <private>...</private> blocks.
 Skip files with `private: true` in YAML front matter.
@@ -68,32 +65,15 @@ For LIGHTWEIGHT sessions: Auto-select PROCESS scope, skip user confirmation, and
      got_stuck → efficiency, premature_stop → efficiency
      For any friction type not listed above, map to the closest ConKeeper category
      based on the friction_detail narrative, defaulting to `efficiency` if unclear.
-   - For THOROUGH depth: cross-session trend analysis:
-     Read ALL facet files in ~/.claude/usage-data/facets/
-     Aggregate friction_counts across sessions
-     Identify recurring friction patterns (e.g., "wrong_approach" correlating
-     with specific goal_categories like "debugging" or "configuration_change")
-     Compare current session's friction profile to historical baseline
-     Flag if this session's dominant friction type has occurred in 3+ past sessions
 4. Cross-reference with existing knowledge:
    - Read `.claude/memory/patterns.md` — don't re-discover known patterns
    - Read `.claude/memory/decisions/` — don't re-recommend existing decisions
    - Use `/memory-search` to check if similar issues were flagged in past session retros
 5. Identify net-new insights vs. reinforcements of existing knowledge
 
-## Phase 4: Research (Conditional)
+If a recommendation would benefit from external validation, briefly verify with external sources before recommending. Skip external research for LIGHTWEIGHT sessions.
 
-Only triggered when the agent needs external context to validate a recommendation.
-
-Examples:
-- User corrected AI to use a different testing pattern → research current best practices
-- Friction around a specific tool → research known issues or alternatives
-
-Never assume. Always back recommendations with evidence from the session or external sources.
-
-Skip this phase for LIGHTWEIGHT sessions.
-
-## Phase 5: Generate Recommendations
+## Phase 4: Generate Recommendations
 
 For each recommendation, include:
 - **What:** Specific, actionable change (one sentence)
@@ -109,9 +89,8 @@ For each recommendation, include:
 
 For LIGHTWEIGHT sessions: Generate 0-2 recommendations max.
 For STANDARD sessions: Generate 2-5 recommendations.
-For THOROUGH sessions: Generate up to 10 recommendations with deeper analysis.
 
-## Phase 6: Present for Approval
+## Phase 5: Present for Approval
 
 Display recommendations grouped by scope (PROCESS vs PROJECT):
 
@@ -123,19 +102,11 @@ Display recommendations grouped by scope (PROCESS vs PROJECT):
 ### Project Improvements
 1. [Recommendation] — Evidence: [quote] — Target: [file]
 
-Present each recommendation with a number. User can respond with:
-- "approve N" or "approve all" → route to target memory file with category tag
-- "deny N" → note as "considered but declined" in retro file
-- "edit N" → user provides modified text, then approve the modified version
+Present each recommendation with a number. User can approve all, selectively approve or deny in natural language. Denied items are noted as "considered but declined" in the retro file.
 
-Approved items routing:
-- Code conventions → patterns.md (Code Conventions section)
-- Architecture decisions → decisions/ADR-NNN-*.md (create new ADR)
-- Terminology → glossary.md
-- Workflow preferences → product-context.md or active-context.md
-- Backlog items → retro file's Improvement Backlog section
+Route approved items to the most appropriate memory file (patterns.md, decisions/, glossary.md, product-context.md, or the retro's Improvement Backlog).
 
-## Phase 7: Write Retrospective
+## Phase 6: Write Retrospective
 
 Create retrospective file at: `.claude/memory/sessions/YYYY-MM-DD-retro.md`
 
@@ -164,12 +135,8 @@ Format:
 - Corrections: [N] detected, [M] processed
 - Observations: [N] tool uses, [M] failures
 - Friction signals: [list of friction patterns detected]
-- Facets data: [available/unavailable]
-  - Outcome: [fully_achieved/mostly_achieved/etc.]
-  - Friction: [friction_counts summary, e.g., "wrong_approach: 2, buggy_code: 1"]
-  - Satisfaction: [user_satisfaction_counts summary]
-  - Detail: [friction_detail narrative, truncated to 200 chars]
-- Session depth: [LIGHTWEIGHT/STANDARD/THOROUGH]
+- Facets data: [available/unavailable] — include outcome, friction counts, and satisfaction summary if available
+- Session depth: [LIGHTWEIGHT/STANDARD]
 
 ---
 *Generated by /memory-reflect*

@@ -206,7 +206,6 @@ observation_hook: true        # Enable/disable PostToolUse observation logging (
 observation_detail: full      # full | stubs_only | off (default: full)
 correction_sensitivity: low   # low | medium — correction detection sensitivity (default: low)
 auto_reflect: true            # Auto-trigger /memory-reflect after /memory-sync (default: true)
-reflect_depth: standard       # minimal | standard | thorough (default: standard)
 ---
 ```
 

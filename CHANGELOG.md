@@ -33,7 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Dashboard, friction deep-dive, best/worst sessions, cross-session pattern analysis
   - Powered by Claude Code facets data (graceful degradation when unavailable)
 - **Stop hook** — suggests `/memory-reflect` at session end when corrections or observations exist
-- **New configuration options:** `observation_hook`, `observation_detail`, `correction_sensitivity`, `auto_reflect`, `reflect_depth`
+- **New configuration options:** `observation_hook`, `observation_detail`, `correction_sensitivity`, `auto_reflect`
 
 ### Changed
 

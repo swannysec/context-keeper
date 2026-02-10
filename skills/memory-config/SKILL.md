@@ -57,24 +57,10 @@ Check for `.claude/memory/.memory-config.md`:
 > - Observation detail: [full/stubs_only/off] (default: full)
 > - Correction sensitivity: [low/medium] (default: low)
 > - Auto-reflect: [true/false] (default: true)
-> - Reflect depth: [minimal/standard/thorough] (default: standard)
 
 ### Step 3: Ask What to Change
 
-> What would you like to change?
-> 1. Token budget preset
-> 2. Suggest memories setting
-> 3. Auto load setting
-> 4. Output style
-> 5. Nothing (exit)
-> 6. Auto-sync threshold
-> 7. Hard-block threshold
-> 8. Context window size
-> 9. Observation hook (enable/disable)
-> 10. Observation detail level
-> 11. Correction sensitivity
-> 12. Auto-reflect after sync
-> 13. Reflection depth
+Ask the user which setting they'd like to change, or whether they're done. Accept natural language responses (e.g., "change output style to quiet", "disable auto-reflect").
 
 ### Step 4: Apply Changes
 
@@ -93,7 +79,6 @@ observation_hook: true
 observation_detail: full
 correction_sensitivity: low
 auto_reflect: true
-reflect_depth: standard
 ---
 ```
 
@@ -134,11 +119,8 @@ try again with verbose
 | Setting | Default | Options | Description |
 |---------|---------|---------|-------------|
 | `auto_reflect` | `true` | `true`, `false` | Auto-trigger /memory-reflect after /memory-sync |
-| `reflect_depth` | `standard` | `minimal`, `standard`, `thorough` | Depth of AAR analysis |
 
-- `minimal`: 0-2 recommendations, skip research phase, lightweight output
-- `standard`: 2-5 recommendations, conditional research, full retro file
-- `thorough`: Up to 10 recommendations, research phase enabled, deep analysis
+Session depth (LIGHTWEIGHT vs STANDARD) is auto-detected based on observation and correction counts.
 
 ## Privacy Tags
 

@@ -240,6 +240,49 @@ Overall complexity score: **Medium** — core design is sound but has accumulate
 
 ---
 
-## Next: Stage 6
+## Stage 6 — Simplicity Fix Results
 
-Fix all "Should simplify" findings (S-1 through S-7). Re-run ALL test suites (03-08). Write simplicity fix summary.
+**Date:** 2026-02-09
+**Status:** Complete — all 7 "Should simplify" findings fixed, all 75 tests pass.
+
+### Changes Applied
+
+| Finding | Action | Files Changed |
+|---------|--------|---------------|
+| S-1: Remove THOROUGH tier | Removed cross-session analysis from Phase 3, removed all THOROUGH depth references. `/memory-insights` remains the dedicated cross-session tool. | `skills/memory-reflect/SKILL.md` |
+| S-2: Collapse Phase 4 (Research) | Replaced standalone Research phase with a 2-line note at end of Phase 3. Workflow reduced from 7 phases to 6. Renumbered subsequent phases. | `skills/memory-reflect/SKILL.md` |
+| S-3: Remove numbered menu | Replaced 13-item numbered menu in Step 3 with natural language instruction. | `skills/memory-config/SKILL.md` |
+| S-4: Deduplicate retro template | Replaced full retro template in schema.md with brief description and pointer to `/memory-reflect` skill. | `core/memory/schema.md` |
+| S-5: Simplify approval protocol | Replaced over-specified "approve N/deny N/edit N" protocol with natural language approval. Simplified routing table to single sentence. | `skills/memory-reflect/SKILL.md` |
+| S-6: Trim evidence template | Removed per-field facets sub-items and "truncated to 200 chars" instruction. Replaced with single line: "include outcome, friction counts, and satisfaction summary if available". | `skills/memory-reflect/SKILL.md` |
+| S-7: Remove `reflect_depth` config | Removed `reflect_depth` from config YAML, Step 2 display, Reflection Settings table, schema.md, README.md, and CHANGELOG.md. Session depth is now purely auto-detected (LIGHTWEIGHT vs STANDARD). Config knobs reduced from 12 to 11. | `skills/memory-config/SKILL.md`, `core/memory/schema.md`, `README.md`, `CHANGELOG.md` |
+
+### "Worth Discussing" Items (D-1, D-2, D-3)
+
+All three kept as-is per reviewer recommendation:
+- **D-1** (Phase 2 Classify Scope): Kept — sets user expectations. Flagged for potential removal based on user testing.
+- **D-2** (/memory-insights sub-commands): Kept — instruction-only cost, provides useful structure for LLM analysis.
+- **D-3** (External Data Sources in schema.md): Kept — already concise at 8 lines.
+
+### Estimated Reduction
+
+- ~70 lines removed across skill files and schema
+- Workflow phases: 7 → 6
+- Config knobs: 12 → 11
+- YAGNI violations resolved: 4/4 (THOROUGH tier, reflect_depth config, "edit N" approval, Phase 4 standalone)
+
+### Test Results
+
+All 75 tests pass across 6 phases:
+- Phase 03 (Categories): 10/10
+- Phase 04 (Privacy): 13/13
+- Phase 05 (Search): 11/11
+- Phase 06 (Observations): 12/12
+- Phase 07 (Corrections): 14/14
+- Phase 08 (Retrospection): 15/15
+
+---
+
+## Next: Stage 7
+
+Parallel security review (Sub-Agent C: holistic architecture security, Sub-Agent D: technical/injection security).
