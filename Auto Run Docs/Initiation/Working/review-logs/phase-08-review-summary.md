@@ -143,6 +143,103 @@ Both reviewers confirmed the overall implementation is well-structured, with ful
 
 ---
 
-## Next: Stage 4
+## Stage 4 — Fix Results
 
-Fix all High and Medium findings autonomously. Re-run ALL test suites (03-08) after fixes.
+All 3 High and 8 Medium findings fixed. Also fixed L-1, L-3, L-4, L-6 (4 Low findings). Skipped L-2 (speculative) and L-5 (cosmetic). All 75 tests pass across 6 phases.
+
+---
+
+## Stage 5 — Simplicity Review
+
+**Date:** 2026-02-09
+**Reviewer:** Code Simplicity Reviewer
+**Status:** Complete — findings ready for Stage 6
+
+### Summary
+
+| Classification | Count |
+|----------------|-------|
+| Should simplify | 7 |
+| Worth discussing | 3 |
+| Acceptable complexity | 3 |
+
+Overall complexity score: **Medium** — core design is sound but has accumulated speculative features. Estimated ~100 LOC removable (~10% across reviewed files).
+
+### Should Simplify (Prioritized by Impact)
+
+**S-1: Remove THOROUGH tier and cross-session analysis from /memory-reflect** *(highest impact)*
+- *File:* `skills/memory-reflect/SKILL.md` (Phase 3, lines 71-76; all THOROUGH references in Phases 3-5)
+- *Issue:* THOROUGH depth's cross-session trend analysis duplicates `/memory-insights`. Having the same analysis in two skills violates DRY and inflates skill complexity.
+- *Fix:* Remove lines 71-76 from Phase 3. Remove all THOROUGH-specific instructions. Keep LIGHTWEIGHT (auto-detected) and STANDARD (default) tiers only. The THOROUGH tier can return in a future version if users request it.
+- *Estimated reduction:* ~15 lines
+
+**S-2: Collapse Phase 4 (Research) into a note in Phase 3**
+- *File:* `skills/memory-reflect/SKILL.md` (lines 84-94)
+- *Issue:* Phase 4 is a full phase for "look things up if needed." In practice, LLMs naturally research when generating recommendations. A separate phase adds ceremony without behavior.
+- *Fix:* Replace Phase 4 with a 2-line note at end of Phase 3: "If a recommendation would benefit from external validation, briefly verify with external sources before recommending." Renumber subsequent phases.
+- *Estimated reduction:* ~8 lines, workflow goes from 7 phases to 6
+
+**S-3: Remove numbered menu from /memory-config Step 3**
+- *File:* `skills/memory-config/SKILL.md` (lines 62-78)
+- *Issue:* A 13-item numbered menu is a CLI pattern forced onto an LLM conversation. The LLM handles "change output style to quiet" natively. The menu numbering is inconsistent (item 5 = "Nothing (exit)") and hard to maintain.
+- *Fix:* Replace with: "Ask the user which setting they'd like to change, or whether they're done."
+- *Estimated reduction:* ~16 lines
+
+**S-4: Deduplicate retro template between schema.md and SKILL.md**
+- *File:* `core/memory/schema.md` (lines 255-292)
+- *Issue:* Full retro template exists in both schema.md and SKILL.md Phase 7. Two copies will drift over time.
+- *Fix:* Reduce schema.md entry to a brief description (like the observations entry) with "See /memory-reflect skill for full format." Keep SKILL.md as the authoritative template.
+- *Estimated reduction:* ~25 lines from schema.md
+
+**S-5: Simplify Phase 6 approval protocol**
+- *File:* `skills/memory-reflect/SKILL.md` (lines 126-136)
+- *Issue:* Over-specified approval protocol ("approve N", "deny N", "edit N", "approve all") constrains natural LLM conversation. The 5-target routing table duplicates knowledge from schema.md.
+- *Fix:* Simplify to: present numbered recommendations, user can approve all or selectively approve/deny in natural language. Route to the most appropriate memory file. Remove "edit N" — users can edit in the target file after approval.
+- *Estimated reduction:* ~8 lines
+
+**S-6: Trim retro Evidence section template (Phase 7)**
+- *File:* `skills/memory-reflect/SKILL.md` (lines 164-172)
+- *Issue:* "truncated to 200 chars" is micro-management. Eight specific evidence line items with exact formatting is over-specified for an LLM output template.
+- *Fix:* Specify required sections (Summary, Improvement Log, Backlog, Evidence) and key evidence items. Remove "truncated to 200 chars" instruction.
+- *Estimated reduction:* ~5 lines
+
+**S-7: Remove `reflect_depth` config knob (conditional on S-1)**
+- *File:* `skills/memory-config/SKILL.md`
+- *Issue:* `reflect_depth` (minimal/standard/thorough) only exists to support the THOROUGH tier. If S-1 removes THOROUGH, this becomes unnecessary — LIGHTWEIGHT is auto-detected, STANDARD is the default.
+- *Fix:* If S-1 is applied, replace `reflect_depth` with nothing. Auto-detection handles lightweight sessions. One less config knob (12→11).
+
+### Worth Discussing
+
+**D-1: Phase 2 (Classify Scope) adds a conversational round-trip for cosmetic grouping**
+- The scope classification (PROCESS/PROJECT/BOTH) doesn't gate different behavior in later phases. Recommendations are already naturally grouped in Phase 6 output. The user can approve/deny individually regardless of scope.
+- Counter-argument: sets user expectations for what kind of output to expect.
+- *Recommendation:* Keep for v1.0.0 but flag for potential removal if user testing shows it adds friction.
+
+**D-2: /memory-insights sub-commands (friction, sessions --worst/--best, patterns)**
+- No user has requested these. The default dashboard covers 80% of the value. The LLM can answer drill-down questions conversationally.
+- Counter-argument: sub-commands serve as structured prompts guiding the LLM toward useful analysis.
+- *Recommendation:* Keep for v1.0.0. They're instruction-only (no code cost) and provide useful structure. Revisit if skill proves too complex.
+
+**D-3: External Data Sources section in schema.md**
+- Already fairly concise at 8 lines. All information is relevant. No simplification needed.
+
+### Acceptable Complexity (No Changes)
+
+- **stop.sh** — 24 lines, already minimal. The `wc -l > 3` threshold correctly handles header lines.
+- **Phase 1 facets integration** — Six specific field names are necessary for reliable extraction. Graceful degradation is required.
+- **Phase 3 friction type mapping** — Explicit mapping table ensures deterministic categorization across sessions. Fallback rule handles unknown types.
+
+### YAGNI Violations Summary
+
+| Violation | File | Action |
+|-----------|------|--------|
+| THOROUGH tier | memory-reflect/SKILL.md | Remove (S-1) |
+| `reflect_depth` config | memory-config/SKILL.md | Remove if S-1 applied (S-7) |
+| `edit N` in approval | memory-reflect/SKILL.md | Remove (part of S-5) |
+| Phase 4 as standalone phase | memory-reflect/SKILL.md | Collapse (S-2) |
+
+---
+
+## Next: Stage 6
+
+Fix all "Should simplify" findings (S-1 through S-7). Re-run ALL test suites (03-08). Write simplicity fix summary.

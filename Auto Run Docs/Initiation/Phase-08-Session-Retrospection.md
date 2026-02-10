@@ -448,7 +448,8 @@ Review stages use dedicated agent types. Agent fixes findings autonomously unles
 - [x] Stage 4 — Fix code and architecture findings: Fix all Critical, High, and Medium findings autonomously (escalate if design-changing). Re-run ALL test suites (03-08) after fixes.
   - **Result:** Fixed all 3 High and 8 Medium findings. Also fixed L-1 (stop.sh ERR diagnostic), L-3 (session-start mentions /memory-reflect), L-4 (corrections lifecycle mentions /memory-reflect), L-6 (2 new tests added). Skipped L-2 (speculative JSON fallback) and L-5 (cosmetic test rename). All 75 tests pass across 6 phases: Phase 03 (10/10), Phase 04 (13/13), Phase 05 (11/11), Phase 06 (12/12), Phase 07 (14/14), Phase 08 (15/15).
 
-- [ ] Stage 5 — Simplicity review: Launch one sub-agent: `subagent_type: "compound-engineering:review:code-simplicity-reviewer"` — review post-fix `skills/memory-reflect/SKILL.md` for AAR workflow over-engineering, `hooks/stop.sh` for unnecessary complexity, and all config/schema additions for unnecessary abstraction.
+- [x] Stage 5 — Simplicity review: Launch one sub-agent: `subagent_type: "compound-engineering:review:code-simplicity-reviewer"` — review post-fix `skills/memory-reflect/SKILL.md` for AAR workflow over-engineering, `hooks/stop.sh` for unnecessary complexity, and all config/schema additions for unnecessary abstraction.
+  - **Result:** 7 "Should simplify", 3 "Worth discussing", 3 "Acceptable complexity". Key findings: S-1 (remove THOROUGH tier — duplicates /memory-insights), S-2 (collapse Research phase into Phase 3 note), S-3 (remove numbered config menu), S-4 (deduplicate retro template), S-5 (simplify approval protocol), S-6 (trim evidence template), S-7 (remove reflect_depth config if S-1 applied). Written to `Working/review-logs/phase-08-review-summary.md`.
 
 - [ ] Stage 6 — Fix simplicity findings + test: Fix all "should apply" findings autonomously. Re-run all tests. Write simplicity summary to review log.
 
