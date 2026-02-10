@@ -310,7 +310,7 @@ output_style: explanatory # Output verbosity (quiet, normal, explanatory)
 token_budget: standard    # Token budget preset: compact, standard, or detailed
 auto_sync_threshold: 60    # Context % to trigger auto memory-sync
 hard_block_threshold: 80   # Context % to block prompts until sync
-context_window_tokens: 200000  # Total context window size in tokens
+context_window_tokens: 200000  # Total context window size in tokens. Auto-detected from model if not set.
 observation_hook: true          # Enable/disable PostToolUse observation logging
 observation_detail: full        # full | stubs_only | off
 correction_sensitivity: low     # low | medium — regex sensitivity for real-time detection
@@ -340,7 +340,7 @@ These settings control ConKeeper's automatic context preservation hooks, which t
 |---------|---------|-------------|
 | `auto_sync_threshold` | 60 | Context usage percentage (0-100) at which auto memory-sync is triggered |
 | `hard_block_threshold` | 80 | Context usage percentage at which prompts are blocked until manual sync |
-| `context_window_tokens` | 200000 | Total context window size in tokens (used for percentage calculation) |
+| `context_window_tokens` | 200000 | Total context window size in tokens. Auto-detected from model if not set. |
 
 **Behavior at each threshold:**
 - **Below `auto_sync_threshold`:** No action. Normal operation.

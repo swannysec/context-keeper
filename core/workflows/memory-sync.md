@@ -175,7 +175,7 @@ ConKeeper's UserPromptSubmit hook monitors context window usage. When usage exce
 Thresholds are configured in `.claude/memory/.memory-config.md`:
 - `auto_sync_threshold`: Percentage at which auto-sync triggers (default: 60)
 - `hard_block_threshold`: Percentage at which the hook blocks prompts until manual sync (default: 80)
-- `context_window_tokens`: Total context window size in tokens (default: 200000)
+- `context_window_tokens`: Total context window size in tokens (default: 200000) (auto-detected from model if not explicitly configured)
 
 See the schema documentation for details.
 
