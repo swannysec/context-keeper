@@ -692,7 +692,7 @@ context_window_tokens: 200000
 # New fields (Phase 04+)
 observation_hook: true          # Enable/disable PostToolUse observation logging
 observation_detail: full        # full | stubs_only | off — level of detail in observations
-correction_sensitivity: low     # low | medium | high — regex sensitivity for correction detection
+correction_sensitivity: low     # low | medium — regex sensitivity for real-time detection
 auto_reflect: true              # Auto-trigger /memory-reflect after /memory-sync
 reflect_depth: standard         # minimal | standard | thorough — AAR depth level
 ---
@@ -707,7 +707,7 @@ reflect_depth: standard         # minimal | standard | thorough — AAR depth le
 | 05 (Search) | 2 (`skills/memory-search/SKILL.md`, `tools/memory-search.sh`) | 4+ (session-start, snippet, schema, platforms) |
 | 06 (Observations) | 1 (`hooks/post-tool-use.sh`) + per-session files | 4 (hooks.json, session-start, config, schema) |
 | 07 (Corrections) | 0 + per-project `corrections-queue.md` | 5 (user-prompt-submit, memory-sync, search, config, schema) |
-| 08 (Retrospection) | 2 (`skills/memory-reflect/SKILL.md`, `hooks/stop.sh`) + per-session files | 4 (hooks.json, memory-sync, config, schema) |
+| 08 (Retrospection) | 3 (`skills/memory-reflect/SKILL.md`, `skills/memory-insights/SKILL.md`, `hooks/stop.sh`) + per-session files | 4 (hooks.json, memory-sync, config, schema) |
 
 ### Version Bump Plan
 
@@ -718,6 +718,19 @@ Each phase bumps a minor version:
 - Phase 06: → v0.8.0 (Observations)
 - Phase 07: → v0.9.0 (Corrections)
 - Phase 08: → v1.0.0 (Retrospection — completes the v1 feature set)
+
+### Claude Code Facets Integration (Added 2026-02-09)
+
+Discovery: Claude Code stores rich per-session analytics in `~/.claude/usage-data/facets/` — pre-classified friction types, satisfaction signals, goal categories, and outcomes. This data complements our regex-based detection (Phase 07) and dramatically enriches retrospection (Phase 08).
+
+**Impact on Phase 07:** Dropped `high` sensitivity level (loose patterns like "hmm", "wait" are unnecessary given facets' LLM-classified friction data). Kept `low` and `medium` levels and `.correction-ignore` for user control.
+
+**Impact on Phase 08:**
+- `/memory-reflect` AAR Phase 1 now reads facets data as a primary evidence source
+- AAR Phase 3 gains cross-session trend analysis at `thorough` depth
+- Retro file Evidence section now includes facets data summary
+- New `/memory-insights` skill for on-demand friction trend analysis and dashboards
+- Schema documents facets as an external read-only data source
 
 ---
 
