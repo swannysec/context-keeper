@@ -50,6 +50,14 @@ Check for `.claude/memory/.memory-config.md`:
 > - Suggest memories: [true/false] (default: true)
 > - Auto load: [true/false] (default: true)
 > - Output style: [quiet/normal/explanatory] (default: normal)
+> - Auto-sync threshold: [0-100] (default: 60)
+> - Hard-block threshold: [0-100] (default: 80)
+> - Context window tokens: [integer] (default: 200000)
+> - Observation hook: [true/false] (default: true)
+> - Observation detail: [full/stubs_only/off] (default: full)
+> - Correction sensitivity: [low/medium] (default: low)
+> - Auto-reflect: [true/false] (default: true)
+> - Reflect depth: [minimal/standard/thorough] (default: standard)
 
 ### Step 3: Ask What to Change
 

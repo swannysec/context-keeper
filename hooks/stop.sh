@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-trap 'exit 0' ERR
+trap 'echo "[ConKeeper] stop.sh failed at line $LINENO" >&2; exit 0' ERR
 
 # Only suggest reflect if project memory exists
 if [[ -d ".claude/memory" ]]; then

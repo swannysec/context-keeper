@@ -29,7 +29,10 @@ Estimate session depth:
 - Count observation entries + correction entries + session file size
 - If facets data exists, also consider: friction count, satisfaction signals
 - If < 5 observations AND 0 corrections AND no facets friction → mark as LIGHTWEIGHT
-- Otherwise → mark as STANDARD or THOROUGH based on reflect_depth config
+- Otherwise → map `reflect_depth` config to session depth:
+  - `minimal` → always use LIGHTWEIGHT depth regardless of activity level
+  - `standard` → use STANDARD depth
+  - `thorough` → use THOROUGH depth
 
 **Privacy:** Skip any content within <private>...</private> blocks.
 Skip files with `private: true` in YAML front matter.
@@ -46,7 +49,7 @@ Present recommendation to user:
 "Scope recommendation: [PROCESS/PROJECT/BOTH] — [brief reason]"
 User can adjust. Proceed with confirmed scope.
 
-For LIGHTWEIGHT sessions: Auto-select PROCESS scope and produce minimal output.
+For LIGHTWEIGHT sessions: Auto-select PROCESS scope, skip user confirmation, and produce minimal output.
 
 ## Phase 3: Analyze Patterns
 
@@ -63,6 +66,8 @@ For LIGHTWEIGHT sessions: Auto-select PROCESS scope and produce minimal output.
      wrong_approach → efficiency, buggy_code → quality,
      misunderstood_request → ux, excessive_changes → quality,
      got_stuck → efficiency, premature_stop → efficiency
+     For any friction type not listed above, map to the closest ConKeeper category
+     based on the friction_detail narrative, defaulting to `efficiency` if unclear.
    - For THOROUGH depth: cross-session trend analysis:
      Read ALL facet files in ~/.claude/usage-data/facets/
      Aggregate friction_counts across sessions
@@ -118,10 +123,10 @@ Display recommendations grouped by scope (PROCESS vs PROJECT):
 ### Project Improvements
 1. [Recommendation] — Evidence: [quote] — Target: [file]
 
-For each recommendation, user can:
-- ✅ Approve → route to target memory file with category tag
-- ❌ Deny → note as "considered but declined" in retro file
-- 🔄 Iterate → modify the recommendation and re-approve
+Present each recommendation with a number. User can respond with:
+- "approve N" or "approve all" → route to target memory file with category tag
+- "deny N" → note as "considered but declined" in retro file
+- "edit N" → user provides modified text, then approve the modified version
 
 Approved items routing:
 - Code conventions → patterns.md (Code Conventions section)

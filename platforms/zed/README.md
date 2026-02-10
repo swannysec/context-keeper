@@ -33,8 +33,11 @@ This project uses ConKeeper for persistent AI context management.
 
 **Available Workflows:**
 - **memory-init** - Initialize memory (see full workflow below)
-- **memory-sync** - Sync session state to memory files  
+- **memory-sync** - Sync session state to memory files
 - **session-handoff** - Generate handoff for new session
+- **memory-search** - Search memory files by keyword or category
+- **memory-reflect** - Session retrospection and improvement analysis
+- **memory-insights** - Session friction trends and success pattern analysis
 
 ### memory-init Workflow
 1. Create `.claude/memory/decisions/` and `.claude/memory/sessions/`

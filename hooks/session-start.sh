@@ -79,6 +79,7 @@ Update memory when:
 
 To initialize memory for a new project: /memory-init
 To sync current session to memory: /memory-sync
+To run session retrospection: /memory-reflect
 </memory-system-active>"
 else
     context="<memory-system-available>

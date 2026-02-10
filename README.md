@@ -93,6 +93,8 @@ This project uses ConKeeper for persistent AI context management.
 - **memory-sync** - Sync session state to memory files
 - **session-handoff** - Generate handoff for new session
 - **memory-search** - Search memory files by keyword or category
+- **memory-reflect** - Session retrospection and improvement analysis
+- **memory-insights** - Session friction trends and success pattern analysis
 
 **Memory Files:**
 - `active-context.md` - Current focus and state
@@ -193,12 +195,18 @@ Thresholds are configurable per-project in `.claude/memory/.memory-config.md`:
 
 ```yaml
 ---
+suggest_memories: true        # Whether to suggest memory additions (default: true)
+auto_load: true               # Auto-load memory at session start (default: true)
+output_style: normal          # quiet | normal | explanatory (default: normal)
+token_budget: standard        # economy | light | standard | detailed (default: standard)
 auto_sync_threshold: 60       # When to auto-sync (default: 60)
 hard_block_threshold: 80      # When to block until manual sync (default: 80)
 context_window_tokens: 200000 # Context window size (default: 200000)
-correction_sensitivity: low   # low | medium — correction detection sensitivity
-auto_reflect: true            # Auto-trigger /memory-reflect after /memory-sync
-reflect_depth: standard       # minimal | standard | thorough
+observation_hook: true        # Enable/disable PostToolUse observation logging (default: true)
+observation_detail: full      # full | stubs_only | off (default: full)
+correction_sensitivity: low   # low | medium — correction detection sensitivity (default: low)
+auto_reflect: true            # Auto-trigger /memory-reflect after /memory-sync (default: true)
+reflect_depth: standard       # minimal | standard | thorough (default: standard)
 ---
 ```
 

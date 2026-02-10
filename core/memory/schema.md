@@ -302,6 +302,7 @@ UserPromptSubmit hook. Processed during /memory-sync, then cleared.
 ```
 
 **Lifecycle:** Auto-populated by hook → processed by /memory-sync → cleared after processing.
+Also consumed by /memory-reflect as evidence during retrospection analysis.
 Items are ephemeral and not meant for long-term storage. Not loaded into context at session start.
 
 **Hook contract note:** The UserPromptSubmit hook reads `user_message` from the hook input JSON.
@@ -537,8 +538,8 @@ Privacy tags are enforced at every automated code path:
 | **SessionStart hook** | Strips `<private>` blocks before context injection; skips files with `private: true` |
 | **`/memory-sync`** | Skips private content during analysis; never moves or references private content |
 | **`/memory-search`** | Two-pass privacy filtering: excludes matches within `<private>` blocks; skips files with `private: true` |
-
-Future code paths (`/memory-reflect`) will enforce privacy tags when implemented.
+| **`/memory-reflect`** | Skips `<private>` blocks and files with `private: true` during evidence gathering and pattern analysis |
+| **`/memory-insights`** | Read-only facets data (no file contents); no privacy filtering needed |
 
 ### Edge Cases
 

@@ -141,6 +141,11 @@ Read `auto_reflect` from `.memory-config.md` (default: true).
 If `auto_reflect: true` and corrections were processed, automatically proceed to
 run /memory-reflect after sync completes (no additional user prompt needed).
 
+**Note:** Auto-reflect only triggers on corrections (not merely "substantial sessions") because
+corrections are the strongest signal that retrospection will yield actionable improvements.
+Auto-reflect is not triggered during auto-sync mode (hook-triggered) since auto-sync skips
+Step 2.5 (corrections processing).
+
 ### Auto-Sync Mode (Hook-Triggered)
 
 When ConKeeper's UserPromptSubmit hook detects high context usage (>= configured threshold), it injects a `<conkeeper-auto-sync>` tag into your context.
