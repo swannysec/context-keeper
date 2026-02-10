@@ -107,3 +107,5 @@ On confirmation:
 ### Step 5: Confirm
 
 > Memory synced. [N] files updated.
+
+After syncing, consider reviewing session observations and corrections for patterns. On Claude Code, use /memory-reflect for automated analysis.

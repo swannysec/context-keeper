@@ -132,6 +132,15 @@ On confirmation:
 
 > Memory synced. [N] files updated.
 
+If corrections were processed in Step 2.5, or if this was a substantial session
+(many decisions, significant progress), append:
+
+> Consider running /memory-reflect for deeper session analysis.
+
+Read `auto_reflect` from `.memory-config.md` (default: true).
+If `auto_reflect: true` and corrections were processed, automatically proceed to
+run /memory-reflect after sync completes (no additional user prompt needed).
+
 ### Auto-Sync Mode (Hook-Triggered)
 
 When ConKeeper's UserPromptSubmit hook detects high context usage (>= configured threshold), it injects a `<conkeeper-auto-sync>` tag into your context.

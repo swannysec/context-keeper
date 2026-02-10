@@ -23,6 +23,8 @@ This project uses ConKeeper for persistent AI context management.
 - **memory-sync** - Sync session state to memory files  
 - **session-handoff** - Generate handoff for new session
 - **memory-search** - Search memory files by keyword or category
+- **memory-reflect** - Session retrospection and improvement analysis
+- **memory-insights** - Session friction trends and success pattern analysis
 
 **Memory Files:**
 - `active-context.md` - Current focus and state
@@ -61,6 +63,8 @@ This project uses ConKeeper for persistent AI context management.
 - **memory-sync** - Sync session state to memory files  
 - **session-handoff** - Generate handoff for new session
 - **memory-search** - Search memory files by keyword or category
+- **memory-reflect** - Session retrospection and improvement analysis
+- **memory-insights** - Session friction trends and success pattern analysis
 
 **Memory Files:**
 - `active-context.md` - Current focus and state
@@ -94,6 +98,8 @@ This project uses ConKeeper for persistent AI context management.
 - **memory-sync** - Sync session state to memory files  
 - **session-handoff** - Generate handoff for new session
 - **memory-search** - Search memory files by keyword or category
+- **memory-reflect** - Session retrospection and improvement analysis
+- **memory-insights** - Session friction trends and success pattern analysis
 
 **Memory Files:**
 - `active-context.md` - Current focus and state

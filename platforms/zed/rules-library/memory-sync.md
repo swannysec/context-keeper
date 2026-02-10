@@ -86,3 +86,5 @@ Synchronize current session state to memory files.
 
 7. **Confirm completion**
    > Memory synced. [N] files updated.
+
+   After syncing, consider reviewing session observations and corrections for patterns. On Claude Code, use /memory-reflect for automated analysis.

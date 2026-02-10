@@ -65,6 +65,8 @@ Check for `.claude/memory/.memory-config.md`:
 > 9. Observation hook (enable/disable)
 > 10. Observation detail level
 > 11. Correction sensitivity
+> 12. Auto-reflect after sync
+> 13. Reflection depth
 
 ### Step 4: Apply Changes
 
@@ -82,6 +84,8 @@ context_window_tokens: 200000
 observation_hook: true
 observation_detail: full
 correction_sensitivity: low
+auto_reflect: true
+reflect_depth: standard
 ---
 ```
 
@@ -116,6 +120,17 @@ Create `.correction-ignore` in project root to suppress specific patterns:
 no worries
 try again with verbose
 ```
+
+## Reflection Settings
+
+| Setting | Default | Options | Description |
+|---------|---------|---------|-------------|
+| `auto_reflect` | `true` | `true`, `false` | Auto-trigger /memory-reflect after /memory-sync |
+| `reflect_depth` | `standard` | `minimal`, `standard`, `thorough` | Depth of AAR analysis |
+
+- `minimal`: 0-2 recommendations, skip research phase, lightweight output
+- `standard`: 2-5 recommendations, conditional research, full retro file
+- `thorough`: Up to 10 recommendations, research phase enabled, deep analysis
 
 ## Privacy Tags
 

@@ -13,6 +13,12 @@ ConKeeper replaces database-backed context management with simple, version-contr
 - **SessionStart hook** - Automatic memory awareness at session start
 - **Context preservation hooks** - Automatic memory-sync before context compaction
 - **Skills + commands** - Easy memory initialization, sync, and session handoff
+- **Category tags** - Structured `<!-- @category: ... -->` tags for filtering and search
+- **Privacy tags** - `<private>` blocks and file-level privacy for sensitive content
+- **Observation hook** - Automatic tool usage logging via PostToolUse hook
+- **Correction detection** - Real-time detection of user corrections and friction signals
+- **Session retrospection** - After Action Review workflow via `/memory-reflect`
+- **Facets integration** - Claude Code session analytics for friction and satisfaction trends
 
 ## Installation
 
@@ -131,6 +137,9 @@ See [docs/platform-guides/](docs/platform-guides/) for detailed platform instruc
 | `/memory-sync` | Sync current session state to memory files |
 | `/session-handoff` | Generate handoff prompt for new session |
 | `/memory-search` | Search memory files by keyword or category |
+| `/memory-config` | View and modify ConKeeper configuration |
+| `/memory-reflect` | Session retrospection using After Action Review methodology |
+| `/memory-insights` | Analyze session friction trends and success patterns (Claude Code) |
 
 ### Memory Structure
 
@@ -187,6 +196,9 @@ Thresholds are configurable per-project in `.claude/memory/.memory-config.md`:
 auto_sync_threshold: 60       # When to auto-sync (default: 60)
 hard_block_threshold: 80      # When to block until manual sync (default: 80)
 context_window_tokens: 200000 # Context window size (default: 200000)
+correction_sensitivity: low   # low | medium — correction detection sensitivity
+auto_reflect: true            # Auto-trigger /memory-reflect after /memory-sync
+reflect_depth: standard       # minimal | standard | thorough
 ---
 ```
 

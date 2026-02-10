@@ -205,7 +205,7 @@ This phase adds a `/memory-reflect` skill implementing a 7-phase After Action Re
     ```
     ```
 
-- [ ] Create the `/memory-insights` skill definition (`skills/memory-insights/SKILL.md`):
+- [x] Create the `/memory-insights` skill definition (`skills/memory-insights/SKILL.md`):
   - Create directory: `mkdir -p skills/memory-insights`
   - Create `skills/memory-insights/SKILL.md` with YAML front matter:
     ```yaml
@@ -260,7 +260,7 @@ This phase adds a `/memory-reflect` skill implementing a 7-phase After Action Re
     on all installations. Session insights require at least one completed Claude Code session."
     ```
 
-- [ ] Create the Stop hook script (`hooks/stop.sh`):
+- [x] Create the Stop hook script (`hooks/stop.sh`):
   - Create `hooks/stop.sh` with `#!/usr/bin/env bash` and `set -euo pipefail`
   - Add error trap: `trap 'exit 0' ERR`
   - Script body:
@@ -293,7 +293,7 @@ This phase adds a `/memory-reflect` skill implementing a 7-phase After Action Re
   - Make executable: `chmod +x hooks/stop.sh`
   - **Note:** The Stop hook is a newer Claude Code feature. If unavailable in the current Claude Code version, the hook registration will be silently ignored. The fallback is manual invocation of `/memory-reflect`.
 
-- [ ] Register the Stop hook in `hooks/hooks.json`:
+- [x] Register the Stop hook in `hooks/hooks.json`:
   - Add a new `"Stop"` entry to the `"hooks"` object:
     ```json
     "Stop": [
@@ -310,7 +310,7 @@ This phase adds a `/memory-reflect` skill implementing a 7-phase After Action Re
     ```
   - Verify the JSON is valid after editing
 
-- [ ] Update `/memory-sync` skill to suggest reflection after sync:
+- [x] Update `/memory-sync` skill to suggest reflection after sync:
   - Edit `skills/memory-sync/SKILL.md`
   - Modify Step 5 (Confirm) to conditionally suggest reflect:
     ```
@@ -328,7 +328,7 @@ This phase adds a `/memory-reflect` skill implementing a 7-phase After Action Re
     run /memory-reflect after sync completes (no additional user prompt needed).
     ```
 
-- [ ] Update `/memory-config` skill with reflect configuration:
+- [x] Update `/memory-config` skill with reflect configuration:
   - Edit `skills/memory-config/SKILL.md`
   - Add:
     ```
@@ -344,7 +344,7 @@ This phase adds a `/memory-reflect` skill implementing a 7-phase After Action Re
     - `thorough`: Up to 10 recommendations, research phase enabled, deep analysis
     ```
 
-- [ ] Update `core/memory/schema.md` to document the retro file and facets data source:
+- [x] Update `core/memory/schema.md` to document the retro file and facets data source:
   - In the Directory Structure, add the retro file:
     ```
     └── sessions/
@@ -369,26 +369,26 @@ This phase adds a `/memory-reflect` skill implementing a 7-phase After Action Re
     Not managed by ConKeeper — read-only access.
     ```
 
-- [ ] Update `.memory-config.md` schema in `core/memory/schema.md`:
+- [x] Update `.memory-config.md` schema in `core/memory/schema.md`:
   - Add the new config fields:
     ```yaml
     auto_reflect: true              # Auto-trigger /memory-reflect after /memory-sync
     reflect_depth: standard         # minimal | standard | thorough
     ```
 
-- [ ] Update `core/snippet.md` to include `/memory-reflect` and `/memory-insights` in available workflows:
+- [x] Update `core/snippet.md` to include `/memory-reflect` and `/memory-insights` in available workflows:
   - Add to the **Available Workflows** list in all three snippet variants:
     ```
     - **memory-reflect** - Session retrospection and improvement analysis
     - **memory-insights** - Session friction trends and success pattern analysis
     ```
 
-- [ ] Update platform adapters for `/memory-reflect` awareness:
+- [x] Update platform adapters for `/memory-reflect` awareness:
   - Platform adapters do not get a full reflect skill (it's too complex for non-Claude-Code platforms without hook support), but they should be aware of it:
   - `platforms/codex/`, `platforms/copilot/`, `platforms/cursor/`: Add a note in their existing sync skills mentioning: "After syncing, consider reviewing session observations and corrections for patterns. On Claude Code, use /memory-reflect for automated analysis."
   - `platforms/zed/rules-library/`: Add a `memory-reflect.md` with a simplified manual workflow: "Review corrections-queue.md and recent observations. Identify patterns. Write improvements to patterns.md or create ADRs."
 
-- [ ] Write tests for session retrospection:
+- [x] Write tests for session retrospection:
   - Create `tests/phase-08-retrospection/test-retrospection.sh`
   - **Setup:** Create temporary directory with full memory structure, sample corrections queue, sample observation file, sample patterns.md and decisions/
   - **Test 1:** Verify Stop hook outputs suggestion when corrections queue has entries
@@ -407,7 +407,7 @@ This phase adds a `/memory-reflect` skill implementing a 7-phase After Action Re
   - **Cleanup:** Remove temporary test directories
   - All tests runnable via `bash tests/phase-08-retrospection/test-retrospection.sh`
 
-- [ ] Bump version to v1.0.0 and run the complete test suite:
+- [x] Bump version to v1.0.0 and run the complete test suite:
   - Edit `plugin.json`: change version to `"1.0.0"`
   - Run ALL phase tests in sequence:
     - `bash tests/phase-03-categories/test-categories.sh`
