@@ -283,6 +283,143 @@ All 75 tests pass across 6 phases:
 
 ---
 
-## Next: Stage 7
+## Stage 7 — Security Review
 
-Parallel security review (Sub-Agent C: holistic architecture security, Sub-Agent D: technical/injection security).
+**Date:** 2026-02-09
+**Reviewers:** Sub-Agent C (Security Architecture), Sub-Agent D (Technical Security)
+**Status:** Complete — findings consolidated
+
+### Summary
+
+| Source | Critical | High | Medium | Low |
+|--------|----------|------|--------|-----|
+| Security Architecture (Sub-Agent C) | 0 | 3 | 7 | 7 |
+| Technical Security (Sub-Agent D) | 0 | 1* | 7 | 10 |
+| **Consolidated (deduplicated)** | **0** | **3** | **9** | **10** |
+
+*TH2 (bc division by zero) self-assessed as Low by reviewer; TH3 merged with SM5.
+
+Both reviewers confirmed overall risk is **LOW**. No critical vulnerabilities found. The attack surface is local-only (no network exposure). Strong input validation on session_id across all hooks. Fail-open design verified. Primary risk area is indirect prompt injection via unsanitized content in memory files.
+
+---
+
+### Consolidated Security Findings
+
+#### High Severity (Must Fix for v1.0.0)
+
+**SEC-H1: Unsanitized tool_input content written to observation file (LLM prompt injection vector)**
+- *Sources:* Architecture SH1, Technical TH1
+- *Files:* `hooks/post-tool-use.sh` (lines 90, 97-98, 103-104)
+- *Issue:* `file_path` and `cmd_summary` extracted from `tool_input` JSON are truncated but never sanitized for markdown metacharacters, HTML comments, pipe chars, or backticks before appending to observations file. Contrast with `user-prompt-submit.sh` line 229 which sanitizes corrections queue entries with `tr -d '\000-\037' | sed 's/|/\\|/g; s/"/\\"/g; s/<!--//g; s/-->//g'`.
+- *Risk:* When `/memory-reflect` reads observations, attacker-influenced content (e.g., from crafted filenames or shell commands in repo Makefiles) becomes part of the LLM prompt.
+- *Fix:* Add same sanitization pipeline as corrections queue (strip control chars, escape pipes/quotes, strip HTML comments).
+
+**SEC-H2: Auto-sync skips user approval — memory file content propagated without review**
+- *Sources:* Architecture SH2, SH3; Technical TL7
+- *Files:* `skills/memory-sync/SKILL.md` (auto-sync mode), all memory files
+- *Issue:* When context threshold triggers auto-sync, `/memory-sync` skips user approval (Step 3). Crafted content in memory files (patterns.md, corrections-queue.md) could be propagated to other memory files without human review. This is an inherent design tradeoff of file-based memory systems.
+- *Risk:* If a shared repo contains malicious memory files, auto-sync amplifies their reach.
+- *Existing mitigations:* Auto-sync skips Step 2.5 (corrections processing). Claude Code has built-in prompt injection defenses. SECURITY.md documents this risk.
+- *Fix:* Add a note in `/memory-sync` auto-sync mode: "During auto-sync, only update active-context.md and progress.md. Do NOT process corrections queue or route items to patterns.md/decisions/." This limits the blast radius of auto-sync.
+
+**SEC-H3: Shared temp directory created without restrictive permissions**
+- *Sources:* Architecture SM5, Technical TH3
+- *Files:* `hooks/user-prompt-submit.sh` (lines 43-44), `hooks/pre-compact.sh` (lines 23-24)
+- *Issue:* `mkdir -p "$FLAG_DIR"` creates `${TMPDIR}/conkeeper/` with default umask permissions. On shared systems, another user could pre-create the directory or plant flag files to suppress auto-sync/correction detection.
+- *Fix:* Add `chmod 700 "$FLAG_DIR" 2>/dev/null` after mkdir in both scripts.
+
+#### Medium Severity (Should Fix)
+
+**SEC-M1: Incomplete cwd path traversal validation in user-prompt-submit.sh**
+- *Sources:* Architecture SM2, Technical TM4
+- *File:* `hooks/user-prompt-submit.sh` (lines 32-34)
+- *Issue:* Only checks for literal `..` — doesn't resolve symlinks. `post-tool-use.sh` uses the stronger `cwd=$(cd "$cwd" && pwd)` pattern.
+- *Fix:* Apply same `cd && pwd` resolution pattern from post-tool-use.sh.
+
+**SEC-M2: TOCTOU race between symlink check and file write in post-tool-use.sh**
+- *Sources:* Architecture SL3, Technical TM1, TL1
+- *File:* `hooks/post-tool-use.sh` (lines 59-62, 97-104)
+- *Issue:* Symlink check on obs_file is separate from the write. Also no symlink check on `obs_dir` (parent directory). Window is tiny but is a textbook TOCTOU.
+- *Fix:* Use `O_NOFOLLOW` semantics where possible. For Bash 3.2, check symlinks on both dir and file immediately before write, and use `>>` append which on most filesystems is atomic for small writes.
+
+**SEC-M3: No symlink check on corrections queue file**
+- *Sources:* Technical TL3
+- *File:* `hooks/user-prompt-submit.sh` (line 222)
+- *Issue:* Unlike observations file which has `[[ -L "$obs_file" ]] && exit 0`, the corrections queue file has no symlink check before writing.
+- *Fix:* Add `[[ -L "$queue_file" ]] && exit 0` before the noclobber creation block.
+
+**SEC-M4: No symlink check on observation file in session-start.sh**
+- *Sources:* Technical TL2
+- *File:* `hooks/session-start.sh` (lines 52-56)
+- *Issue:* Creates/writes observations file header without checking if path is a symlink.
+- *Fix:* Add `[[ -L "$obs_file" ]] && : # skip symlink` before writing.
+
+**SEC-M5: Incomplete sanitization of user message in corrections queue**
+- *Sources:* Architecture SM4, Technical TM5
+- *File:* `hooks/user-prompt-submit.sh` (line 229)
+- *Issue:* Strips `<!--`/`-->` but doesn't handle backtick injection or other markdown metacharacters. Primary concern is LLM prompt injection when `/memory-reflect` reads the queue.
+- *Fix:* Add backtick escaping: `s/\`/\\'/g` to the sed pipeline.
+
+**SEC-M6: pre-compact.sh flag file content not validated before arithmetic**
+- *Sources:* Architecture SL4 (mapped), Technical TL4
+- *File:* `hooks/pre-compact.sh` (line 31)
+- *Issue:* `flag_epoch=$(cat "$flag_file")` used directly in arithmetic. Non-numeric content triggers ERR trap. Unlike `user-prompt-submit.sh` which validates `^[0-9]+$`.
+- *Fix:* Add validation: `if [[ -z "$flag_epoch" ]] || ! [[ "$flag_epoch" =~ ^[0-9]+$ ]]; then flag_epoch=0; fi`
+
+**SEC-M7: Unbounded stdin read into bash variable**
+- *Sources:* Technical TM6
+- *Files:* `hooks/user-prompt-submit.sh` (line 21), `hooks/post-tool-use.sh` (line 15)
+- *Issue:* `input=$(cat)` reads all stdin into memory. Extremely large JSON payloads could cause excessive memory consumption.
+- *Fix:* Add `head -c 1048576` (1MB cap) before storing: `input=$(head -c 1048576)`. Hook timeouts (10s/5s) provide secondary mitigation.
+
+**SEC-M8: Glob metacharacters in .correction-ignore can suppress all detection**
+- *Sources:* Architecture SM6, Technical TM7
+- *File:* `hooks/user-prompt-submit.sh` (line 194)
+- *Issue:* Patterns from `.correction-ignore` used in `[[ "$text" == *"$pattern"* ]]` glob match. A pattern of `*` suppresses all corrections. Patterns with `?` or `[` have glob interpretation.
+- *Fix:* Document this as intended behavior (`.correction-ignore` is a user-controlled suppression file). Add a comment in the code: `# Note: patterns are glob-matched, not literal substring`
+
+**SEC-M9: Auto-sync mode should limit scope of memory writes**
+- *Sources:* Architecture SH2 (expanded fix)
+- *File:* `skills/memory-sync/SKILL.md`
+- *Issue:* Auto-sync mode processes the same steps as manual sync, minus Step 2.5 (corrections) and Step 3 (approval). It could still write to patterns.md, decisions/, glossary.md if the LLM decides to during Steps 2 and 4.
+- *Fix:* Add explicit instruction: "During auto-sync mode, only update active-context.md and progress.md. Do not create new decision files or modify patterns.md."
+
+#### Low Severity (Informational / Hardening)
+
+**SEC-L1:** `readlink -f` unavailable on stock macOS < 12.3 — fails closed (rejects symlink), which is correct security behavior. No fix needed.
+
+**SEC-L2:** Pure-bash JSON encode fallback doesn't escape all control characters (0x00-0x1F beyond \t, \r, \n). jq is tried first. Very low practical risk.
+
+**SEC-L3:** `stop.sh` uses relative paths without cwd validation. Read-only (no writes), output is only stderr suggestion. Low risk.
+
+**SEC-L4:** `post-tool-use.sh` config values `observation_hook`/`observation_detail` not validated against allowlist. Unexpected values fall through to default behavior (safe).
+
+**SEC-L5:** `sed` range pattern in `strip_private` could delete to EOF if no closing `</private>` tag. Documented behavior. Linear time.
+
+**SEC-L6:** Observations and corrections queue files grow unboundedly within a session. No automatic cleanup. Disk space concern for very long sessions only.
+
+**SEC-L7:** Search query echoed without sanitization in memory-search output. Self-injection only (query comes from user's own prompt).
+
+**SEC-L8:** `cd "$cwd"` in post-tool-use.sh follows symlinks — resolved path could be outside expected tree. Mitigated by requiring `.claude/memory` under resolved path.
+
+**SEC-L9:** TOCTOU in corrections queue creation (`noclobber` + separate `>>` append). Writes are under PIPE_BUF, kernel guarantees atomicity for small appends. Practical risk near zero.
+
+**SEC-L10:** Config file path from unresolved cwd in user-prompt-submit.sh. Related to SEC-M1 — fixed by same cwd resolution.
+
+### Security Posture Assessment
+
+**Overall risk: LOW**
+
+The ConKeeper plugin demonstrates strong security awareness:
+- Fail-open design in all hooks (verified)
+- Session ID validation with `^[a-zA-Z0-9_-]+$` in all hooks (verified)
+- Symlink protection for observation files (partial — needs expansion)
+- Input sanitization for corrections queue (partial — needs expansion to observations)
+- Timeout enforcement in hooks.json
+- Privacy enforcement documented and implemented
+
+**Primary risk area:** Indirect prompt injection via memory files (SEC-H2). This is an inherent design tradeoff of file-based memory systems and is appropriately documented. The fix limits auto-sync blast radius.
+
+**Security tests recommended:** 10 new tests (see Technical Security Review output for full list).
+
+---

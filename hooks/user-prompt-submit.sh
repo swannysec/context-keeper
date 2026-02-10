@@ -18,7 +18,8 @@ fi
 
 # --- Parse hook input ---
 
-input=$(cat)
+# Cap stdin at 1MB to prevent excessive memory use from large payloads
+input=$(head -c 1048576)
 session_id=$(printf '%s' "$input" | jq -r '.session_id // empty')
 transcript_path=$(printf '%s' "$input" | jq -r '.transcript_path // empty')
 cwd=$(printf '%s' "$input" | jq -r '.cwd // empty')
@@ -28,9 +29,9 @@ if [[ -z "$session_id" ]] || ! [[ "$session_id" =~ ^[a-zA-Z0-9_-]+$ ]]; then
     exit 0
 fi
 
-# Validate cwd (security: prevents path traversal in config/queue file paths)
-if [[ -n "$cwd" ]] && [[ "$cwd" == *".."* ]]; then
-    exit 0
+# Validate and resolve cwd (security: prevents path traversal and symlink escape)
+if [[ -n "$cwd" ]]; then
+    cwd=$(cd "$cwd" 2>/dev/null && pwd) || exit 0
 fi
 
 # Validate transcript exists and is readable
@@ -42,6 +43,7 @@ fi
 
 FLAG_DIR="${TMPDIR:-/tmp}/conkeeper"
 mkdir -p "$FLAG_DIR"
+chmod 700 "$FLAG_DIR" 2>/dev/null || true
 
 SYNC_FLAG="$FLAG_DIR/synced-${session_id}"
 BLOCK_FLAG="$FLAG_DIR/blocked-${session_id}"
@@ -181,10 +183,14 @@ if [[ -n "$user_message" ]]; then
     fi
 
     # Suppression — read .correction-ignore file
+    # Note: patterns are glob-matched as substrings. Glob metacharacters (*, ?, [...])
+    # in patterns will be interpreted. A pattern of "*" would suppress all corrections.
     IGNORE_FILE="${cwd:-.}/.correction-ignore"
     check_suppression() {
         local text_lower="$1"  # expects pre-lowercased text
         if [[ -f "$IGNORE_FILE" ]]; then
+            # Security: refuse to read through symlinks
+            [[ -L "$IGNORE_FILE" ]] && return 1
             # Limit to first 1000 lines to prevent DoS from large ignore files
             while IFS= read -r pattern || [[ -n "$pattern" ]]; do
                 [[ "$pattern" =~ ^#.*$ ]] && continue  # skip comments
@@ -221,12 +227,14 @@ if [[ -n "$user_message" ]]; then
         if ! check_suppression "$user_message_lower"; then
             queue_file="${cwd:-.}/.claude/memory/corrections-queue.md"
             if [[ -d "${cwd:-.}/.claude/memory" ]]; then
+                # Security: refuse to write through symlinks
+                [[ -L "$queue_file" ]] && exit 0
                 # Create queue file with header atomically (noclobber prevents race conditions)
                 if [[ ! -f "$queue_file" ]]; then
                     (set -o noclobber; printf '# Corrections Queue\n<!-- Auto-populated by ConKeeper UserPromptSubmit hook -->\n\n' > "$queue_file") 2>/dev/null || true
                 fi
-                # Truncate to 200 chars, strip control chars, escape pipes/quotes, strip HTML comments
-                truncated_msg=$(printf '%s' "$user_message" | cut -c1-200 | tr -d '\000-\037' | sed 's/|/\\|/g; s/"/\\"/g; s/<!--//g; s/-->//g')
+                # Truncate to 200 chars, strip control chars, escape markdown metacharacters, strip HTML comments
+                truncated_msg=$(printf '%s' "$user_message" | cut -c1-200 | tr -d '\000-\037' | sed 's/|/\\|/g; s/"/\\"/g; s/`/'"'"'/g; s/<!--//g; s/-->//g')
                 timestamp=$(date '+%Y-%m-%d %H:%M:%S')
                 printf -- '- **%s** | %s | "%s" | ref: previous assistant message\n' \
                     "$timestamp" "$detected_type" "$truncated_msg" >> "$queue_file"

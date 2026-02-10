@@ -10,8 +10,8 @@ if ! command -v jq &>/dev/null; then
     exit 0
 fi
 
-# Parse session_id from stdin JSON
-input=$(cat)
+# Parse session_id from stdin JSON (cap at 1MB for safety)
+input=$(head -c 1048576)
 session_id=$(printf '%s' "$input" | jq -r '.session_id // empty')
 
 # Validate session_id format (alphanumeric, hyphens, underscores only)
@@ -21,6 +21,7 @@ fi
 
 # Flag directory for cross-hook communication
 flag_dir="${TMPDIR:-/tmp}/conkeeper"
+mkdir -p "$flag_dir" 2>/dev/null; chmod 700 "$flag_dir" 2>/dev/null || true
 flag_file="${flag_dir}/synced-${session_id}"
 
 # Check if memory-sync ran this session (flag file exists and is not stale)
@@ -29,6 +30,10 @@ TTL=14400
 
 if [[ -f "$flag_file" ]]; then
     flag_epoch=$(cat "$flag_file" 2>/dev/null || echo "0")
+    # Validate epoch is numeric (prevents arithmetic errors from corrupted flag files)
+    if [[ -z "$flag_epoch" ]] || ! [[ "$flag_epoch" =~ ^[0-9]+$ ]]; then
+        flag_epoch=0
+    fi
     current_epoch=$(date +%s)
     age=$(( current_epoch - flag_epoch ))
 

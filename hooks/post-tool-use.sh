@@ -12,7 +12,8 @@ fi
 
 # --- Parse hook input ---
 
-input=$(cat)
+# Cap stdin at 1MB to prevent excessive memory use from large payloads
+input=$(head -c 1048576)
 tool_name=$(printf '%s' "$input" | jq -r '.tool_name // empty') || exit 0
 session_id=$(printf '%s' "$input" | jq -r '.session_id // empty') || exit 0
 cwd=$(printf '%s' "$input" | jq -r '.cwd // empty') || exit 0
@@ -58,7 +59,8 @@ obs_dir="$cwd/.claude/memory/sessions"
 obs_file="$obs_dir/$(date +%Y-%m-%d)-observations.md"
 mkdir -p "$obs_dir"
 
-# Security: refuse to write through symlinks
+# Security: refuse to write through symlinks (check both dir and file)
+[[ -L "$obs_dir" ]] && exit 0
 [[ -L "$obs_file" ]] && exit 0
 
 # Create file header if needed
@@ -86,9 +88,16 @@ if [[ "$observation_detail" == "stubs_only" ]]; then
     is_stub=true
 fi
 
-# Extract file path from tool_input (truncate to 120 chars)
+# Sanitize function: strip control chars, escape markdown/HTML metacharacters
+# Prevents indirect prompt injection when /memory-reflect reads observation files
+sanitize_field() {
+    printf '%s' "$1" | tr -d '\000-\037' | sed 's/|/\\|/g; s/`/'"'"'/g; s/<!--//g; s/-->//g'
+}
+
+# Extract file path from tool_input (truncate to 120 chars, sanitize)
 file_path=$(printf '%s' "$tool_input" | jq -r '.file_path // .path // .command // .pattern // "—"' 2>/dev/null | head -c 120) || true
 [[ -z "$file_path" ]] && file_path="—"
+file_path=$(sanitize_field "$file_path")
 
 # --- Build and append entry ---
 
@@ -100,6 +109,7 @@ else
     # Full entry: timestamp | tool | action | path | command_summary | success
     cmd_summary=$(printf '%s' "$tool_input" | jq -r '.command // "—"' 2>/dev/null | head -c 80) || true
     [[ -z "$cmd_summary" ]] && cmd_summary="—"
+    cmd_summary=$(sanitize_field "$cmd_summary")
     printf -- '- **%s** | `%s` | %s | `%s` | `%s` | success\n' \
         "$timestamp" "$tool_name" "$action" "$file_path" "$cmd_summary" >> "$obs_file"
 fi

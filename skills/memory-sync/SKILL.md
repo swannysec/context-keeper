@@ -154,7 +154,8 @@ When ConKeeper's UserPromptSubmit hook detects high context usage (>= configured
 
 1. **Skip Step 2.5** (Process Corrections Queue) — defer queue processing to next manual sync for security (queue entries need human review)
 2. **Skip Step 3** (Propose Updates / user approval) — apply updates directly
-3. Run Steps 1, 2, 2.6, and 4 as normal (review state, analyze session, auto-categorize, apply updates)
+3. **Limit scope:** Only update `active-context.md` and `progress.md`. Do not create new decision files, modify `patterns.md`, or modify `glossary.md` during auto-sync. This limits blast radius of unsupervised writes.
+4. Run Steps 1, 2, 2.6, and 4 as normal (review state, analyze session, auto-categorize, apply limited updates)
 4. Run Step 5 (confirm) but replace the confirmation with:
 
 > [ConKeeper: Auto memory-sync complete. Consider running /clear to start fresh with your synced context.]

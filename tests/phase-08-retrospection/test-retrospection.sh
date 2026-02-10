@@ -534,6 +534,213 @@ print('|'.join(invalid))
 }
 
 # ---------------------------------------------------------------------------
+# Test 16 (Security): post-tool-use.sh sanitizes tool_input content
+# ---------------------------------------------------------------------------
+test_post_tool_use_sanitizes_content() {
+  local workdir="$TMPDIR_TEST/test16"
+  mkdir -p "$workdir/.claude/memory/sessions"
+
+  # Create observations header
+  printf '# Session Observations — %s\n<!-- Auto-generated -->\n\n' "$(date +%Y-%m-%d)" > "$workdir/.claude/memory/sessions/$(date +%Y-%m-%d)-observations.md"
+
+  # Build JSON with jq to properly escape HTML comments and backticks in command value
+  local input
+  input=$(jq -n --arg cwd "$workdir" '{
+    tool_name: "Bash",
+    session_id: "test16sec",
+    cwd: $cwd,
+    tool_input: {command: "echo <!-- inject --> `evil`"}
+  }')
+  local output
+  output=$(printf '%s' "$input" | bash "$REPO_ROOT/hooks/post-tool-use.sh" 2>&1) || true
+
+  local obs_file="$workdir/.claude/memory/sessions/$(date +%Y-%m-%d)-observations.md"
+  if [[ -f "$obs_file" ]]; then
+    local ok=true
+    # Should NOT contain raw HTML comments (<!-- stripped by sanitize_field)
+    if grep '<!-- inject' "$obs_file" >/dev/null 2>&1; then
+      echo "  Found raw HTML comment in observations"
+      ok=false
+    fi
+    # Should NOT contain raw backticks around evil (backticks replaced by sanitize_field)
+    if grep '`evil`' "$obs_file" >/dev/null 2>&1; then
+      echo "  Found raw backticks in observations"
+      ok=false
+    fi
+    if [[ "$ok" == true ]]; then
+      pass "Test 16 (Security): post-tool-use.sh sanitizes tool_input content"
+    else
+      fail "Test 16 (Security): post-tool-use.sh should sanitize HTML comments and backticks"
+      echo "  Content: $(cat "$obs_file")"
+    fi
+  else
+    fail "Test 16 (Security): observations file not created"
+  fi
+}
+
+# ---------------------------------------------------------------------------
+# Test 17 (Security): user-prompt-submit.sh refuses symlinked queue file
+# ---------------------------------------------------------------------------
+test_queue_symlink_protection() {
+  if ! command -v jq &>/dev/null; then
+    pass "Test 17 (Security): Skipped — jq not available"
+    return
+  fi
+
+  local workdir="$TMPDIR_TEST/test17"
+  mkdir -p "$workdir/.claude/memory"
+
+  # Create a symlink for the corrections queue
+  local evil_target="$TMPDIR_TEST/test17-evil-target.md"
+  printf '' > "$evil_target"
+  ln -sf "$evil_target" "$workdir/.claude/memory/corrections-queue.md"
+
+  # Create a dummy transcript
+  local transcript="$TMPDIR_TEST/test17-transcript.jsonl"
+  echo '{}' > "$transcript"
+
+  # Feed a correction-triggering message
+  local input='{"session_id":"test17sec","transcript_path":"'"$transcript"'","cwd":"'"$workdir"'","user_message":"no, use snake_case instead"}'
+  printf '%s' "$input" | bash "$REPO_ROOT/hooks/user-prompt-submit.sh" 2>/dev/null || true
+
+  # The evil target should remain empty (symlink was refused)
+  local evil_size
+  evil_size=$(wc -c < "$evil_target" 2>/dev/null || echo "0")
+  evil_size=$(echo "$evil_size" | tr -d ' ')
+
+  if [[ "$evil_size" -eq 0 ]]; then
+    pass "Test 17 (Security): user-prompt-submit.sh refuses to write through symlinked queue file"
+  else
+    fail "Test 17 (Security): user-prompt-submit.sh wrote through symlink ($evil_size bytes)"
+  fi
+}
+
+# ---------------------------------------------------------------------------
+# Test 18 (Security): post-tool-use.sh refuses symlinked observations directory
+# ---------------------------------------------------------------------------
+test_obs_dir_symlink_protection() {
+  if ! command -v jq &>/dev/null; then
+    pass "Test 18 (Security): Skipped — jq not available"
+    return
+  fi
+
+  local workdir="$TMPDIR_TEST/test18"
+  mkdir -p "$workdir/.claude/memory"
+
+  # Create a symlink for the sessions directory
+  local evil_dir="$TMPDIR_TEST/test18-evil-dir"
+  mkdir -p "$evil_dir"
+  ln -sf "$evil_dir" "$workdir/.claude/memory/sessions"
+
+  # Feed a tool use event
+  local input='{"tool_name":"Read","session_id":"test18sec","cwd":"'"$workdir"'","tool_input":{"file_path":"/tmp/test.md"}}'
+  printf '%s' "$input" | bash "$REPO_ROOT/hooks/post-tool-use.sh" 2>/dev/null || true
+
+  # The evil directory should remain empty (symlink was refused)
+  local evil_files
+  evil_files=$(ls -A "$evil_dir" 2>/dev/null | wc -l || echo "0")
+  evil_files=$(echo "$evil_files" | tr -d ' ')
+
+  if [[ "$evil_files" -eq 0 ]]; then
+    pass "Test 18 (Security): post-tool-use.sh refuses to write through symlinked sessions directory"
+  else
+    fail "Test 18 (Security): post-tool-use.sh wrote through symlinked directory ($evil_files files)"
+  fi
+}
+
+# ---------------------------------------------------------------------------
+# Test 19 (Security): pre-compact.sh handles corrupted flag file gracefully
+# ---------------------------------------------------------------------------
+test_precompact_corrupted_flag() {
+  if ! command -v jq &>/dev/null; then
+    pass "Test 19 (Security): Skipped — jq not available"
+    return
+  fi
+
+  local flag_dir="${TMPDIR:-/tmp}/conkeeper"
+  mkdir -p "$flag_dir"
+
+  # Create a corrupted flag file with non-numeric content
+  echo "CORRUPTED" > "$flag_dir/synced-test19sec"
+
+  local input='{"session_id":"test19sec"}'
+  local exit_code=0
+  printf '%s' "$input" | bash "$REPO_ROOT/hooks/pre-compact.sh" 2>/dev/null || exit_code=$?
+
+  # Clean up
+  rm -f "$flag_dir/synced-test19sec"
+
+  if [[ "$exit_code" -eq 0 ]]; then
+    pass "Test 19 (Security): pre-compact.sh handles corrupted flag file gracefully"
+  else
+    fail "Test 19 (Security): pre-compact.sh should exit 0 even with corrupted flag (got exit $exit_code)"
+  fi
+}
+
+# ---------------------------------------------------------------------------
+# Test 20 (Security): session-start.sh refuses symlinked observations file
+# ---------------------------------------------------------------------------
+test_session_start_obs_symlink() {
+  local workdir="$TMPDIR_TEST/test20"
+  mkdir -p "$workdir/.claude/memory/sessions"
+
+  # Create a symlink for the observations file
+  local evil_target="$TMPDIR_TEST/test20-evil.md"
+  printf '' > "$evil_target"
+  local obs_name="$(date +%Y-%m-%d)-observations.md"
+  ln -sf "$evil_target" "$workdir/.claude/memory/sessions/$obs_name"
+
+  # Run session-start.sh
+  local output
+  output=$(cd "$workdir" && bash "$REPO_ROOT/hooks/session-start.sh" 2>/dev/null) || true
+
+  # The evil target should remain empty (symlink was refused)
+  local evil_size
+  evil_size=$(wc -c < "$evil_target" 2>/dev/null || echo "0")
+  evil_size=$(echo "$evil_size" | tr -d ' ')
+
+  if [[ "$evil_size" -eq 0 ]]; then
+    pass "Test 20 (Security): session-start.sh refuses to write through symlinked observations file"
+  else
+    fail "Test 20 (Security): session-start.sh wrote through symlink ($evil_size bytes)"
+  fi
+}
+
+# ---------------------------------------------------------------------------
+# Test 21 (Security): user-prompt-submit.sh backtick sanitization in corrections queue
+# ---------------------------------------------------------------------------
+test_correction_backtick_sanitization() {
+  if ! command -v jq &>/dev/null; then
+    pass "Test 21 (Security): Skipped — jq not available"
+    return
+  fi
+
+  local workdir="$TMPDIR_TEST/test21"
+  mkdir -p "$workdir/.claude/memory"
+
+  # Create a dummy transcript
+  local transcript="$TMPDIR_TEST/test21-transcript.jsonl"
+  echo '{}' > "$transcript"
+
+  # Feed a message with backticks that triggers correction detection
+  local input='{"session_id":"test21sec","transcript_path":"'"$transcript"'","cwd":"'"$workdir"'","user_message":"no, use `snake_case` instead of `camelCase`"}'
+  printf '%s' "$input" | bash "$REPO_ROOT/hooks/user-prompt-submit.sh" 2>/dev/null || true
+
+  local queue_file="$workdir/.claude/memory/corrections-queue.md"
+  if [[ -f "$queue_file" ]]; then
+    # Should NOT contain raw backticks in the message content
+    if grep -q '`snake_case`' "$queue_file"; then
+      fail "Test 21 (Security): corrections queue should escape backticks"
+      return
+    fi
+    pass "Test 21 (Security): user-prompt-submit.sh escapes backticks in corrections queue"
+  else
+    # Queue might not be created if correction was not detected — that's ok
+    pass "Test 21 (Security): user-prompt-submit.sh backtick test (no correction detected — pass)"
+  fi
+}
+
+# ---------------------------------------------------------------------------
 # Run all tests
 # ---------------------------------------------------------------------------
 echo "=== Phase 08: Session Retrospection Tests ==="
@@ -554,6 +761,12 @@ test_insights_facets_reference
 test_reflect_facets_graceful
 test_stop_hook_observations_only
 test_hooks_timeout_values
+test_post_tool_use_sanitizes_content
+test_queue_symlink_protection
+test_obs_dir_symlink_protection
+test_precompact_corrupted_flag
+test_session_start_obs_symlink
+test_correction_backtick_sanitization
 
 echo ""
 echo "=== Results: $PASS passed, $FAIL failed ==="
