@@ -255,7 +255,8 @@ This phase extends `user-prompt-submit.sh` with regex patterns to detect user co
 
 Review stages use dedicated agent types. Agent fixes findings autonomously unless they would change design intent or functionality. All review summaries are written to `Auto Run Docs/Initiation/Working/review-logs/phase-07-review-summary.md`. See `Working/Agent-Orchestration-Plan.md` Section 3 for full review prompt templates.
 
-- [ ] Stage 1 — Run tests: Execute `bash tests/phase-07-corrections/test-corrections.sh` and all prior phase tests (03-06) for regression. All tests must pass. Fix any failures before proceeding.
+- [x] Stage 1 — Run tests: Execute `bash tests/phase-07-corrections/test-corrections.sh` and all prior phase tests (03-06) for regression. All tests must pass. Fix any failures before proceeding.
+  - ✅ Phase 07: 10/10 passed. Phase 06: 12/12 passed. Phase 05: 11/11 passed. Phase 04: 13/13 passed. Phase 03: 10/10 passed. **56 total, 0 failures.**
 
 - [ ] Stage 2 — Parallel code and architecture review: Launch two sub-agents in parallel. Sub-Agent A: `subagent_type: "workflow-toolkit:code-reviewer"` — review `user-prompt-submit.sh` modifications for correctness (regex patterns must match documented examples), Bash 3.2 compat (CRITICAL — `${text,,}` is Bash 4+, must use `tr`; `\s` and `\w` behavior in Bash regex), false positive analysis, error handling (detection must not break existing token monitoring), queue file format, config parsing for `correction_sensitivity`, `.correction-ignore` parsing robustness. Sub-Agent B: `subagent_type: "compound-engineering:review:architecture-strategist"` — review schema documentation of corrections-queue.md, config schema updates, `/memory-sync` Step 2.5 integration clarity, category tag routing correctness, cross-platform portability (hook is Claude Code only — are portable parts documented?), backward compat (existing hook behavior preserved). Both output findings as Critical/High/Medium/Low.
 
