@@ -13,59 +13,37 @@ fi
 # --- Parse hook input ---
 
 input=$(cat)
-tool_name=$(printf '%s' "$input" | jq -r '.tool_name // empty')
-tool_input=$(printf '%s' "$input" | jq -r '.tool_input // empty')
-session_id=$(printf '%s' "$input" | jq -r '.session_id // empty')
-cwd=$(printf '%s' "$input" | jq -r '.cwd // empty')
+tool_name=$(printf '%s' "$input" | jq -r '.tool_name // empty') || exit 0
+session_id=$(printf '%s' "$input" | jq -r '.session_id // empty') || exit 0
+cwd=$(printf '%s' "$input" | jq -r '.cwd // empty') || exit 0
+# tool_input needs jq -c: it's a JSON object that must be serialized to string
+tool_input=$(printf '%s' "$input" | jq -c '.tool_input // empty' 2>/dev/null) || tool_input=""
 
 # Validate session_id (security: prevents path traversal)
 if [[ -z "$session_id" ]] || ! [[ "$session_id" =~ ^[a-zA-Z0-9_-]+$ ]]; then
     exit 0
 fi
 
+# Resolve cwd to an absolute path (security: prevents path traversal via crafted cwd)
+cwd=$(cd "$cwd" 2>/dev/null && pwd) || exit 0
+
 # Require memory directory to exist
-[[ -d "${cwd:-.}/.claude/memory" ]] || exit 0
+[[ -d "$cwd/.claude/memory" ]] || exit 0
 
 # --- Read configuration ---
 
 observation_hook=true
 observation_detail="full"
 
-config_file="${cwd:-.}/.claude/memory/.memory-config.md"
+config_file="$cwd/.claude/memory/.memory-config.md"
 if [[ -f "$config_file" ]]; then
-    frontmatter=""
-    in_frontmatter=false
-    delimiter_count=0
-    while IFS= read -r line; do
-        if [[ "$line" == "---" ]]; then
-            delimiter_count=$((delimiter_count + 1))
-            if (( delimiter_count == 1 )); then
-                in_frontmatter=true
-                continue
-            elif (( delimiter_count == 2 )); then
-                break
-            fi
-        fi
-        if [[ "$in_frontmatter" == true ]]; then
-            line="${line%%#*}"
-            frontmatter+="$line"$'\n'
-        fi
-    done < "$config_file"
-
+    # Extract YAML frontmatter (between first two --- lines), strip comments
+    frontmatter=$(awk '/^---$/ { if (++n == 2) exit; next } n == 1 { sub(/#.*/, ""); print }' "$config_file")
     if [[ -n "$frontmatter" ]]; then
-        parse_yaml_val() {
-            local key="$1"
-            local default="$2"
-            local val
-            val=$(printf '%s' "$frontmatter" | awk -F': *' -v k="$key" '$1 == k { gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print $2 }')
-            if [[ -n "$val" ]]; then
-                printf '%s' "$val"
-            else
-                printf '%s' "$default"
-            fi
-        }
-        observation_hook=$(parse_yaml_val "observation_hook" "$observation_hook")
-        observation_detail=$(parse_yaml_val "observation_detail" "$observation_detail")
+        val=$(printf '%s' "$frontmatter" | awk -F': *' '$1 == "observation_hook" { gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print $2 }')
+        [[ -n "$val" ]] && observation_hook="$val"
+        val=$(printf '%s' "$frontmatter" | awk -F': *' '$1 == "observation_detail" { gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print $2 }')
+        [[ -n "$val" ]] && observation_detail="$val"
     fi
 fi
 
@@ -76,9 +54,12 @@ fi
 
 # --- Observation file path ---
 
-obs_dir="${cwd:-.}/.claude/memory/sessions"
+obs_dir="$cwd/.claude/memory/sessions"
 obs_file="$obs_dir/$(date +%Y-%m-%d)-observations.md"
 mkdir -p "$obs_dir"
+
+# Security: refuse to write through symlinks
+[[ -L "$obs_file" ]] && exit 0
 
 # Create file header if needed
 if [[ ! -f "$obs_file" ]]; then
@@ -89,22 +70,15 @@ fi
 
 timestamp=$(date +%H:%M:%S)
 
-# Action type mapping (case statement for Bash 3.2 compat)
-action=""
+# Action type + stub classification (single case for Bash 3.2 compat)
+is_stub=true
 case "$tool_name" in
-    Read|Glob|Grep)          action="read" ;;
+    Read|Glob|Grep)                    action="read" ;;
     Write|Edit|MultiEdit|NotebookEdit) action="write" ;;
-    Bash)                    action="execute" ;;
-    WebFetch|WebSearch)      action="fetch" ;;
-    Task)                    action="delegate" ;;
-    *)                       action="other" ;;
-esac
-
-# Determine if this is a stub tool
-is_stub=false
-case "$tool_name" in
-    Read|Write|Edit|Glob|Grep|MultiEdit|NotebookEdit)
-        is_stub=true ;;
+    Bash)                              action="execute"; is_stub=false ;;
+    WebFetch|WebSearch)                action="fetch";   is_stub=false ;;
+    Task)                              action="delegate"; is_stub=false ;;
+    *)                                 action="other";   is_stub=false ;;
 esac
 
 # When observation_detail is stubs_only, all tools get stub entries
@@ -113,7 +87,8 @@ if [[ "$observation_detail" == "stubs_only" ]]; then
 fi
 
 # Extract file path from tool_input (truncate to 120 chars)
-file_path=$(printf '%s' "$tool_input" | jq -r '.file_path // .path // .command // .pattern // "—"' 2>/dev/null | head -c 120) || file_path="—"
+file_path=$(printf '%s' "$tool_input" | jq -r '.file_path // .path // .command // .pattern // "—"' 2>/dev/null | head -c 120) || true
+[[ -z "$file_path" ]] && file_path="—"
 
 # --- Build and append entry ---
 
@@ -123,7 +98,8 @@ if [[ "$is_stub" == true ]]; then
         "$timestamp" "$tool_name" "$action" "$file_path" >> "$obs_file"
 else
     # Full entry: timestamp | tool | action | path | command_summary | success
-    cmd_summary=$(printf '%s' "$tool_input" | jq -r '.command // "—"' 2>/dev/null | head -c 80) || cmd_summary="—"
+    cmd_summary=$(printf '%s' "$tool_input" | jq -r '.command // "—"' 2>/dev/null | head -c 80) || true
+    [[ -z "$cmd_summary" ]] && cmd_summary="—"
     printf -- '- **%s** | `%s` | %s | `%s` | `%s` | success\n' \
         "$timestamp" "$tool_name" "$action" "$file_path" "$cmd_summary" >> "$obs_file"
 fi

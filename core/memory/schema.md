@@ -244,6 +244,12 @@ and /memory-search --sessions.
 
 **Cleanup:** Observation files grow during a session. Old observation files can be safely deleted. They are not required for memory continuity.
 
+**Privacy note:** Bash command summaries (first 80 characters) are recorded verbatim. These may contain sensitive data such as API keys, connection strings, or passwords passed as command arguments. Consider adding observation files to `.gitignore` if your project is version-controlled:
+
+```gitignore
+.claude/memory/sessions/*-observations.md
+```
+
 ## Validation Rules
 
 ### Required Files

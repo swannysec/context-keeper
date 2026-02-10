@@ -53,7 +53,7 @@ test_full_entry() {
   json=$(cat <<'JSONEOF'
 {
   "tool_name": "Bash",
-  "tool_input": "{\"command\":\"npm test --coverage\"}",
+  "tool_input": {"command":"npm test --coverage"},
   "session_id": "sess-abc-123",
   "cwd": "WORKDIR_PLACEHOLDER"
 }
@@ -84,7 +84,7 @@ test_stub_entry() {
   json=$(cat <<'JSONEOF'
 {
   "tool_name": "Read",
-  "tool_input": "{\"file_path\":\"/src/main.ts\"}",
+  "tool_input": {"file_path":"/src/main.ts"},
   "session_id": "sess-abc-123",
   "cwd": "WORKDIR_PLACEHOLDER"
 }
@@ -119,7 +119,7 @@ observation_hook: false
   json=$(cat <<'JSONEOF'
 {
   "tool_name": "Bash",
-  "tool_input": "{\"command\":\"echo hello\"}",
+  "tool_input": {"command":"echo hello"},
   "session_id": "sess-abc-123",
   "cwd": "WORKDIR_PLACEHOLDER"
 }
@@ -154,7 +154,7 @@ observation_detail: stubs_only
   json=$(cat <<'JSONEOF'
 {
   "tool_name": "Bash",
-  "tool_input": "{\"command\":\"npm test --coverage\"}",
+  "tool_input": {"command":"npm test --coverage"},
   "session_id": "sess-abc-123",
   "cwd": "WORKDIR_PLACEHOLDER"
 }
@@ -257,7 +257,7 @@ test_no_memory_dir() {
   json=$(cat <<'JSONEOF'
 {
   "tool_name": "Bash",
-  "tool_input": "{\"command\":\"echo hello\"}",
+  "tool_input": {"command":"echo hello"},
   "session_id": "sess-abc-123",
   "cwd": "WORKDIR_PLACEHOLDER"
 }
@@ -289,7 +289,7 @@ test_field_extraction() {
   json_read=$(cat <<'JSONEOF'
 {
   "tool_name": "Read",
-  "tool_input": "{\"file_path\":\"/src/app.ts\"}",
+  "tool_input": {"file_path":"/src/app.ts"},
   "session_id": "sess-abc-123",
   "cwd": "WORKDIR_PLACEHOLDER"
 }
@@ -303,7 +303,7 @@ JSONEOF
   json_glob=$(cat <<'JSONEOF'
 {
   "tool_name": "Glob",
-  "tool_input": "{\"pattern\":\"**/*.ts\"}",
+  "tool_input": {"pattern":"**/*.ts"},
   "session_id": "sess-abc-123",
   "cwd": "WORKDIR_PLACEHOLDER"
 }
@@ -317,7 +317,7 @@ JSONEOF
   json_bash=$(cat <<'JSONEOF'
 {
   "tool_name": "Bash",
-  "tool_input": "{\"command\":\"git status\"}",
+  "tool_input": {"command":"git status"},
   "session_id": "sess-abc-123",
   "cwd": "WORKDIR_PLACEHOLDER"
 }
@@ -364,7 +364,7 @@ observation_detail: off
   json=$(cat <<'JSONEOF'
 {
   "tool_name": "Bash",
-  "tool_input": "{\"command\":\"echo hello\"}",
+  "tool_input": {"command":"echo hello"},
   "session_id": "sess-abc-123",
   "cwd": "WORKDIR_PLACEHOLDER"
 }
@@ -385,6 +385,76 @@ JSONEOF
 }
 
 # ---------------------------------------------------------------------------
+# Test 11: Security — symlink attack on observation file is blocked
+# ---------------------------------------------------------------------------
+test_symlink_attack() {
+  local workdir="$TMPDIR_TEST/test11"
+  setup_project "$workdir"
+
+  # Create a "sensitive" target file
+  echo "SENSITIVE_DATA" > "$workdir/sensitive.txt"
+
+  # Pre-create a symlink at the observation file path
+  local today
+  today=$(date +%Y-%m-%d)
+  ln -s "$workdir/sensitive.txt" "$workdir/.claude/memory/sessions/${today}-observations.md"
+
+  local json
+  json=$(cat <<'JSONEOF'
+{
+  "tool_name": "Bash",
+  "tool_input": {"command":"echo test"},
+  "session_id": "sess-abc-123",
+  "cwd": "WORKDIR_PLACEHOLDER"
+}
+JSONEOF
+)
+  json="${json//WORKDIR_PLACEHOLDER/$workdir}"
+
+  printf '%s' "$json" | bash "$REPO_ROOT/hooks/post-tool-use.sh" 2>/dev/null || true
+
+  # The sensitive file should NOT have observation data appended
+  if ! grep -q 'Bash' "$workdir/sensitive.txt"; then
+    pass "Test 11: Symlink attack on observation file is blocked"
+  else
+    fail "Test 11: Symlink attack should be blocked — data written through symlink"
+    echo "  Content: $(cat "$workdir/sensitive.txt")"
+  fi
+}
+
+# ---------------------------------------------------------------------------
+# Test 12: Security — invalid session_id with path traversal chars is rejected
+# ---------------------------------------------------------------------------
+test_session_id_traversal() {
+  local workdir="$TMPDIR_TEST/test12"
+  setup_project "$workdir"
+
+  local json
+  json=$(cat <<'JSONEOF'
+{
+  "tool_name": "Bash",
+  "tool_input": {"command":"echo evil"},
+  "session_id": "../../../etc/passwd",
+  "cwd": "WORKDIR_PLACEHOLDER"
+}
+JSONEOF
+)
+  json="${json//WORKDIR_PLACEHOLDER/$workdir}"
+
+  local exit_code=0
+  printf '%s' "$json" | bash "$REPO_ROOT/hooks/post-tool-use.sh" 2>/dev/null || exit_code=$?
+
+  local obs_file="$workdir/.claude/memory/sessions/$(date +%Y-%m-%d)-observations.md"
+
+  # Should exit 0 and NOT write any observation
+  if [[ "$exit_code" -eq 0 ]] && [[ ! -f "$obs_file" ]]; then
+    pass "Test 12: Path traversal session_id is rejected"
+  else
+    fail "Test 12: Path traversal session_id should be rejected"
+  fi
+}
+
+# ---------------------------------------------------------------------------
 # Run all tests
 # ---------------------------------------------------------------------------
 echo "=== Phase 06: PostToolUse Observation Hook Tests ==="
@@ -400,6 +470,8 @@ test_bash_compat
 test_no_memory_dir
 test_field_extraction
 test_detail_off
+test_symlink_attack
+test_session_id_traversal
 
 echo ""
 echo "=== Results: $PASS passed, $FAIL failed ==="
