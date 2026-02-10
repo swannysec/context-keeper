@@ -33,6 +33,7 @@ View and modify ConKeeper configuration for the current project.
 | `auto_sync_threshold` | 0-100 (default: 60) | Context % to trigger auto memory-sync |
 | `hard_block_threshold` | 0-100 (default: 80) | Context % to block prompts until sync |
 | `context_window_tokens` | integer (default: 200000) | Context window size in tokens |
+| `correction_sensitivity` | low/medium (default: low) | Regex sensitivity for correction detection |
 
 ## Workflow
 
@@ -63,6 +64,7 @@ Check for `.claude/memory/.memory-config.md`:
 > 8. Context window size
 > 9. Observation hook (enable/disable)
 > 10. Observation detail level
+> 11. Correction sensitivity
 
 ### Step 4: Apply Changes
 
@@ -79,6 +81,7 @@ hard_block_threshold: 80
 context_window_tokens: 200000
 observation_hook: true
 observation_detail: full
+correction_sensitivity: low
 ---
 ```
 
@@ -92,6 +95,27 @@ observation_detail: full
 - `full`: Full entries for Bash/external tools, stub entries for native tools
 - `stubs_only`: Stub entries for all tools (timestamp, tool, type, path, status only)
 - `off`: No observation logging (same as `observation_hook: false`)
+
+## Correction Detection Settings
+
+| Setting | Default | Options | Description |
+|---------|---------|---------|-------------|
+| `correction_sensitivity` | `low` | `low`, `medium` | Regex sensitivity for detecting user corrections and friction |
+
+- `low`: Conservative patterns only (fewer false positives, higher precision)
+- `medium`: Adds looser patterns like "instead", "should be", "rather"
+
+Note: `high` sensitivity was intentionally omitted — Claude Code's facets data
+provides higher-accuracy retrospective friction classification. This hook is a
+fast first-pass; `/memory-reflect` uses facets for accurate second-pass analysis.
+
+Create `.correction-ignore` in project root to suppress specific patterns:
+```
+# Patterns to never flag as corrections
+# One line per pattern, matched case-insensitively
+try again with.*verbose
+no worries
+```
 
 ## Privacy Tags
 

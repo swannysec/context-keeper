@@ -27,7 +27,33 @@ Review conversation for:
 - Patterns established
 - Questions resolved or raised
 
-### Step 2.5: Auto-Categorize Entries
+### Step 2.5: Process Corrections Queue
+
+Check if `.claude/memory/corrections-queue.md` exists and has entries.
+
+If it has entries:
+1. Read the queue file
+2. For each queued item, suggest routing to the appropriate memory file:
+   - Code conventions, naming, style → `patterns.md` (under Code Conventions)
+   - Architecture choices, design decisions → `decisions/ADR-NNN-*.md` (create new ADR)
+   - Terminology corrections → `glossary.md`
+   - General preferences, project context → `product-context.md`
+   - Workflow preferences → `active-context.md`
+3. Include the suggested routing in Step 3's proposed update output
+4. Add a category tag to each routed item (using Phase 03 categories):
+   - Corrections about conventions → `<!-- @category: convention -->`
+   - Corrections about decisions → `<!-- @category: decision -->`
+   - Corrections about patterns → `<!-- @category: pattern -->`
+   - Friction about bugs → `<!-- @category: bugfix -->`
+   - Other → `<!-- @category: learning -->`
+5. User approves, modifies, or rejects each item
+6. Approved items are written to target files with category tags
+7. Rejected items are removed from queue
+8. After processing, clear the queue file (replace contents with just the header)
+9. If any corrections were processed, append to Step 5 output:
+   "Corrections processed. Consider running /memory-reflect for deeper analysis."
+
+### Step 2.6: Auto-Categorize Entries
 
 For each new entry identified in Step 2, assign a memory category tag:
 - Contains "decided", "chose", "selected", "went with" → `decision`
@@ -113,7 +139,7 @@ When ConKeeper's UserPromptSubmit hook detects high context usage (>= configured
 **When this tag is detected in the current context:**
 
 1. **Skip Step 3** (Propose Updates / user approval) — apply updates directly
-2. Run Steps 1, 2, 2.5, and 4 as normal (review state, analyze session, auto-categorize, apply updates)
+2. Run Steps 1, 2, 2.5, 2.6, and 4 as normal (review state, analyze session, process corrections, auto-categorize, apply updates)
 3. Run Step 5 (confirm) but replace the confirmation with:
 
 > [ConKeeper: Auto memory-sync complete. Consider running /clear to start fresh with your synced context.]

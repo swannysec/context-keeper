@@ -17,6 +17,7 @@ This document defines the standard format for ConKeeper memory files. Implementa
 ├── decisions/           # Architecture Decision Records
 │   ├── ADR-001-*.md
 │   └── ADR-NNN-*.md
+├── corrections-queue.md  # Ephemeral correction/friction queue (auto-populated)
 └── sessions/            # Session summaries
     ├── YYYY-MM-DD-HHMM.md
     ├── YYYY-MM-DD-topic.md
@@ -250,6 +251,20 @@ and /memory-search --sessions.
 .claude/memory/sessions/*-observations.md
 ```
 
+### corrections-queue.md
+
+**Purpose:** Ephemeral queue of user corrections and friction signals detected by the
+UserPromptSubmit hook. Processed during /memory-sync, then cleared.
+
+**Format:**
+```
+- **YYYY-MM-DD HH:MM:SS** | correction | "user text" | ref: previous assistant message
+- **YYYY-MM-DD HH:MM:SS** | friction | "user text" | ref: previous assistant message
+```
+
+**Lifecycle:** Auto-populated by hook → processed by /memory-sync → cleared after processing.
+Items are ephemeral and not meant for long-term storage.
+
 ## Validation Rules
 
 ### Required Files
@@ -282,6 +297,7 @@ hard_block_threshold: 80   # Context % to block prompts until sync
 context_window_tokens: 200000  # Total context window size in tokens
 observation_hook: true          # Enable/disable PostToolUse observation logging
 observation_detail: full        # full | stubs_only | off
+correction_sensitivity: low     # low | medium — regex sensitivity for real-time detection
 ---
 ```
 
@@ -511,6 +527,21 @@ In this example, the staging API key and its category tag are excluded from all 
 Memory files should be concise to fit within context windows. The default preset is `standard` (~4000 tokens total). See **Token Budget Presets** above for per-file limits.
 
 Projects can customize via `.memory-config.md` or during `memory-init`.
+
+### .correction-ignore (Optional)
+
+**Location:** Project root (alongside `.claude/`)
+**Purpose:** Suppression patterns for correction detection. One pattern per line.
+Lines starting with `#` are comments. Empty lines are ignored.
+Patterns are matched case-insensitively against the full user prompt text.
+
+Example:
+```
+# Patterns to never flag as corrections
+try again with.*verbose
+no worries
+that's fine
+```
 
 ## Security Considerations
 

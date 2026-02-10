@@ -75,6 +75,7 @@ fi
 auto_sync_threshold=60
 hard_block_threshold=80
 context_window_tokens=200000
+correction_sensitivity=low
 
 # Try to read config from project's .memory-config.md
 config_file="${cwd:-.}/.claude/memory/.memory-config.md"
@@ -116,6 +117,107 @@ if [[ -f "$config_file" ]]; then
         auto_sync_threshold=$(parse_yaml_int "auto_sync_threshold" "$auto_sync_threshold")
         hard_block_threshold=$(parse_yaml_int "hard_block_threshold" "$hard_block_threshold")
         context_window_tokens=$(parse_yaml_int "context_window_tokens" "$context_window_tokens")
+        # Parse string YAML values (for correction_sensitivity)
+        parse_yaml_str() {
+            local key="$1"
+            local default="$2"
+            local val
+            val=$(printf '%s' "$frontmatter" | awk -F': *' -v k="$key" '$1 == k { gsub(/^[ \t]+|[ \t]+$/, "", $2); print $2 }')
+            if [[ -n "$val" ]]; then
+                printf '%s' "$val"
+            else
+                printf '%s' "$default"
+            fi
+        }
+        correction_sensitivity=$(parse_yaml_str "correction_sensitivity" "low")
+    fi
+fi
+
+# --- Correction & Friction Detection ---
+
+# Extract user message from hook input
+user_message=$(printf '%s' "$input" | jq -r '.user_message // empty')
+
+if [[ -n "$user_message" ]]; then
+    # Define correction regex patterns (conservative/low sensitivity)
+    CORRECTION_PATTERNS=(
+        'no[,. ]+[[:space:]]*(use|do|try|it[[:space:]]+should)'
+        'actually[,. ]+[[:space:]]*'
+        "that'?s[[:space:]]+(wrong|incorrect|not[[:space:]]+right)"
+        'I[[:space:]]+(said|meant|asked[[:space:]]+for)'
+        "(not|don'?t)[[:space:]]+[a-zA-Z0-9_]+[,. ]+[[:space:]]*(instead|use|do|try)"
+    )
+
+    # Define friction regex patterns (conservative/low sensitivity)
+    FRICTION_PATTERNS=(
+        "(didn'?t|doesn'?t|not)[[:space:]]+work"
+        '(try[[:space:]]+again|redo|start[[:space:]]+over)'
+        'wrong[[:space:]]+(approach|file|method|function|path|directory)'
+        "(let'?s[[:space:]]+revert|undo[[:space:]]+that|go[[:space:]]+back)"
+        'still[[:space:]]+(broken|failing|erroring|crashing)'
+    )
+
+    # Medium sensitivity: add looser patterns
+    if [[ "${correction_sensitivity:-low}" == "medium" ]]; then
+        CORRECTION_PATTERNS+=('instead' 'should[[:space:]]+be' 'rather' 'prefer')
+        FRICTION_PATTERNS+=('not[[:space:]]+what' 'different[[:space:]]+from')
+    fi
+
+    # Suppression — read .correction-ignore file
+    IGNORE_FILE="${cwd:-.}/.correction-ignore"
+    check_suppression() {
+        local text="$1"
+        if [[ -f "$IGNORE_FILE" ]]; then
+            local text_lower
+            text_lower=$(printf '%s' "$text" | tr '[:upper:]' '[:lower:]')
+            while IFS= read -r pattern || [[ -n "$pattern" ]]; do
+                [[ "$pattern" =~ ^#.*$ ]] && continue  # skip comments
+                [[ -z "$pattern" ]] && continue          # skip empty lines
+                local pattern_lower
+                pattern_lower=$(printf '%s' "$pattern" | tr '[:upper:]' '[:lower:]')
+                if [[ "$text_lower" == *"$pattern_lower"* ]]; then
+                    return 0  # suppressed
+                fi
+            done < "$IGNORE_FILE"
+        fi
+        return 1  # not suppressed
+    }
+
+    # Pattern matching loop
+    detected_type=""
+    for pattern in "${CORRECTION_PATTERNS[@]}"; do
+        if [[ "$user_message" =~ $pattern ]]; then
+            detected_type="correction"
+            break
+        fi
+    done
+    if [[ -z "$detected_type" ]]; then
+        for pattern in "${FRICTION_PATTERNS[@]}"; do
+            if [[ "$user_message" =~ $pattern ]]; then
+                detected_type="friction"
+                break
+            fi
+        done
+    fi
+
+    # Queue entry (if detected and not suppressed)
+    if [[ -n "$detected_type" ]]; then
+        if ! check_suppression "$user_message"; then
+            queue_file="${cwd:-.}/.claude/memory/corrections-queue.md"
+            if [[ -d "${cwd:-.}/.claude/memory" ]]; then
+                # Create queue file with header if it doesn't exist
+                if [[ ! -f "$queue_file" ]]; then
+                    printf '# Corrections Queue\n<!-- Auto-populated by ConKeeper UserPromptSubmit hook -->\n\n' > "$queue_file"
+                fi
+                # Truncate user message to 200 chars for the queue entry
+                truncated_msg=$(printf '%s' "$user_message" | head -c 200)
+                # Sanitize: remove control characters except newline/tab
+                truncated_msg=$(printf '%s' "$truncated_msg" | tr -d '\000-\010\013\014\016-\037')
+                timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+                printf -- '- **%s** | %s | "%s" | ref: previous assistant message\n' \
+                    "$timestamp" "$detected_type" "$truncated_msg" >> "$queue_file"
+            fi
+        fi
     fi
 fi
 

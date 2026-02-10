@@ -1,13 +1,15 @@
 # Phase 07: Correction & Friction Detection
 
+**Agent Persona:** NLP/Pattern Detection Developer — Focus on regex precision, false positive minimization, sensitivity tuning.
 **Version Bump:** v0.8.0 → v0.9.0
 **Dependency:** Phase 03 (Categories) for category tags on routed corrections. Phase 04 (Privacy) for enforcement awareness. Phase 06 (Observations) produces data that complements corrections for Phase 08. All should be complete.
+**Orchestration Reference:** See `Working/Agent-Orchestration-Plan.md` for review persona prompts and sub-agent dispatch instructions.
 
 This phase extends `user-prompt-submit.sh` with regex patterns to detect user corrections ("no, use X instead") and friction signals ("that didn't work"). Detected items are queued in `corrections-queue.md` for processing during `/memory-sync`.
 
 ## Tasks
 
-- [ ] Extend `hooks/user-prompt-submit.sh` with correction and friction detection:
+- [x] Extend `hooks/user-prompt-submit.sh` with correction and friction detection:
   - Add correction/friction detection **before** the existing token-checking logic (before the `# --- Parse transcript for token usage ---` section, around line 122)
   - **Extract user message from hook input:**
     - The UserPromptSubmit hook input JSON includes the user's prompt. Extract it:
@@ -52,20 +54,14 @@ This phase extends `user-prompt-submit.sh` with regex patterns to detect user co
         'still\s+(broken|failing|erroring|crashing)'
     )
     ```
-  - **Medium sensitivity (add if `correction_sensitivity` is `medium` or `high`):**
+  - **Medium sensitivity (add if `correction_sensitivity` is `medium`):**
     ```bash
-    if [[ "$correction_sensitivity" == "medium" ]] || [[ "$correction_sensitivity" == "high" ]]; then
+    if [[ "$correction_sensitivity" == "medium" ]]; then
         CORRECTION_PATTERNS+=('instead' 'should\s+be' 'rather' 'prefer')
         FRICTION_PATTERNS+=('not\s+what' 'different\s+from')
     fi
     ```
-  - **High sensitivity (add if `correction_sensitivity` is `high`):**
-    ```bash
-    if [[ "$correction_sensitivity" == "high" ]]; then
-        CORRECTION_PATTERNS+=('hmm' 'wait' 'oops')
-        FRICTION_PATTERNS+=('no$' 'nope')
-    fi
-    ```
+  - **Note:** Only `low` and `medium` sensitivity levels are supported. The `high` level was dropped because Claude Code's facets data (`~/.claude/usage-data/facets/`) provides higher-accuracy retrospective friction classification via LLM analysis, making loose real-time regex patterns (e.g., "hmm", "wait") unnecessary. This hook provides fast first-pass detection; `/memory-reflect` consumes facets for the accurate second pass.
   - **Suppression — read `.correction-ignore` file:**
     ```bash
     IGNORE_FILE="${cwd:-.}/.correction-ignore"
@@ -124,7 +120,7 @@ This phase extends `user-prompt-submit.sh` with regex patterns to detect user co
   - **Important:** This detection block runs BEFORE the existing token usage logic. It should NOT affect the hook's JSON output or exit code. The hook's existing behavior (context monitor) continues unchanged after detection.
   - **Performance:** Regex matching adds <50ms. Well within the 10-second timeout.
 
-- [ ] Update `/memory-sync` skill to process the corrections queue:
+- [x] Update `/memory-sync` skill to process the corrections queue:
   - Edit `skills/memory-sync/SKILL.md`
   - Insert a new **Step 2.5: Process Corrections Queue** between Step 2 (Analyze Session) and Step 3 (Propose Updates):
     ```
@@ -155,12 +151,12 @@ This phase extends `user-prompt-submit.sh` with regex patterns to detect user co
        "Corrections processed. Consider running /memory-reflect for deeper analysis."
     ```
 
-- [ ] Update `/memory-search` skill to enable searching the corrections queue:
+- [x] Update `/memory-search` skill to enable searching the corrections queue:
   - Edit `skills/memory-search/SKILL.md`
   - Add a note in the skill body: "The corrections queue (`.claude/memory/corrections-queue.md`) is included in default project memory search scope."
   - No script changes needed — the queue file lives in `.claude/memory/` and is already in the default search path
 
-- [ ] Document the corrections queue format in `core/memory/schema.md`:
+- [x] Document the corrections queue format in `core/memory/schema.md`:
   - Add to the Directory Structure:
     ```
     .claude/memory/
@@ -180,7 +176,7 @@ This phase extends `user-prompt-submit.sh` with regex patterns to detect user co
     Items are ephemeral and not meant for long-term storage.
     ```
 
-- [ ] Update `/memory-config` skill to document correction sensitivity:
+- [x] Update `/memory-config` skill to document correction sensitivity:
   - Edit `skills/memory-config/SKILL.md`
   - Add:
     ```
@@ -188,11 +184,14 @@ This phase extends `user-prompt-submit.sh` with regex patterns to detect user co
 
     | Setting | Default | Options | Description |
     |---------|---------|---------|-------------|
-    | `correction_sensitivity` | `low` | `low`, `medium`, `high` | Regex sensitivity for detecting user corrections and friction |
+    | `correction_sensitivity` | `low` | `low`, `medium` | Regex sensitivity for detecting user corrections and friction |
 
     - `low`: Conservative patterns only (fewer false positives, higher precision)
     - `medium`: Adds looser patterns like "instead", "should be", "rather"
-    - `high`: Adds very loose patterns like "hmm", "wait", "oops"
+
+    Note: `high` sensitivity was intentionally omitted — Claude Code's facets data
+    provides higher-accuracy retrospective friction classification. This hook is a
+    fast first-pass; `/memory-reflect` uses facets for accurate second-pass analysis.
 
     Create `.correction-ignore` in project root to suppress specific patterns:
     ```
@@ -203,13 +202,13 @@ This phase extends `user-prompt-submit.sh` with regex patterns to detect user co
     ```
     ```
 
-- [ ] Update `.memory-config.md` schema in `core/memory/schema.md`:
+- [x] Update `.memory-config.md` schema in `core/memory/schema.md`:
   - Add the new field to the config example:
     ```yaml
-    correction_sensitivity: low     # low | medium | high — regex sensitivity
+    correction_sensitivity: low     # low | medium — regex sensitivity for real-time detection
     ```
 
-- [ ] Document the `.correction-ignore` file format:
+- [x] Document the `.correction-ignore` file format:
   - Add to `core/memory/schema.md` a new section:
     ```
     ### .correction-ignore (Optional)
@@ -228,7 +227,7 @@ This phase extends `user-prompt-submit.sh` with regex patterns to detect user co
     ```
     ```
 
-- [ ] Write tests for correction and friction detection:
+- [x] Write tests for correction and friction detection:
   - Create `tests/phase-07-corrections/test-corrections.sh`
   - **Setup:** Create temporary directory with `.claude/memory/` and a mock `.memory-config.md` with `correction_sensitivity: low`
   - **Test 1:** Feed UserPromptSubmit JSON with `user_message: "no, use snake_case for that"`. Verify a correction entry is appended to `corrections-queue.md`.
@@ -244,10 +243,34 @@ This phase extends `user-prompt-submit.sh` with regex patterns to detect user co
   - **Cleanup:** Remove temporary test directories
   - All tests runnable via `bash tests/phase-07-corrections/test-corrections.sh`
 
-- [ ] Bump version to v0.9.0 and verify all existing tests pass:
+- [x] Bump version to v0.9.0 and verify all existing tests pass:
   - Edit `plugin.json`: change version to `"0.9.0"`
   - Run all previous phase tests (03 through 06)
   - Run Phase 07 tests
   - Verify `user-prompt-submit.sh` still produces valid JSON output for normal prompts
   - Verify the hook completes within the 10-second timeout
   - Commit all changes with message: `feat: add correction and friction detection to UserPromptSubmit hook (v0.9.0)`
+
+## Review & Validation
+
+Review stages use dedicated agent types. Agent fixes findings autonomously unless they would change design intent or functionality. All review summaries are written to `Auto Run Docs/Initiation/Working/review-logs/phase-07-review-summary.md`. See `Working/Agent-Orchestration-Plan.md` Section 3 for full review prompt templates.
+
+- [ ] Stage 1 — Run tests: Execute `bash tests/phase-07-corrections/test-corrections.sh` and all prior phase tests (03-06) for regression. All tests must pass. Fix any failures before proceeding.
+
+- [ ] Stage 2 — Parallel code and architecture review: Launch two sub-agents in parallel. Sub-Agent A: `subagent_type: "workflow-toolkit:code-reviewer"` — review `user-prompt-submit.sh` modifications for correctness (regex patterns must match documented examples), Bash 3.2 compat (CRITICAL — `${text,,}` is Bash 4+, must use `tr`; `\s` and `\w` behavior in Bash regex), false positive analysis, error handling (detection must not break existing token monitoring), queue file format, config parsing for `correction_sensitivity`, `.correction-ignore` parsing robustness. Sub-Agent B: `subagent_type: "compound-engineering:review:architecture-strategist"` — review schema documentation of corrections-queue.md, config schema updates, `/memory-sync` Step 2.5 integration clarity, category tag routing correctness, cross-platform portability (hook is Claude Code only — are portable parts documented?), backward compat (existing hook behavior preserved). Both output findings as Critical/High/Medium/Low.
+
+- [ ] Stage 3 — Synthesize review findings: Read both outputs. Deduplicate. Create consolidated list. Write summary to review log.
+
+- [ ] Stage 4 — Fix code and architecture findings: Fix all Critical, High, and Medium findings autonomously (escalate if design-changing). Re-run all test suites (03-07) after fixes. Especially verify the hook's JSON output is unchanged for normal prompts.
+
+- [ ] Stage 5 — Simplicity review: Launch one sub-agent: `subagent_type: "compound-engineering:review:code-simplicity-reviewer"` — review post-fix `user-prompt-submit.sh` correction detection code for over-engineering in the pattern arrays, sensitivity escalation, suppression logic, and queue entry formatting.
+
+- [ ] Stage 6 — Fix simplicity findings + test: Fix all "should apply" findings autonomously. Re-run all tests. Write simplicity summary to review log.
+
+- [ ] Stage 7 — Parallel security review (BLOCKED until Stage 6 complete and tests pass): Launch two sub-agents in parallel. CRITICAL: Do NOT start until Stage 6 is fully complete. Sub-Agent C: `subagent_type: "compound-engineering:review:security-sentinel"` (architecture focus) — review trust model for user message content flowing into corrections-queue.md (untrusted — Markdown injection, HTML, control chars?), `.correction-ignore` as attacker-controlled input (crafted patterns causing ReDoS?), data flow from queue through `/memory-sync` to permanent memory files, side channel potential. Sub-Agent D: `subagent_type: "compound-engineering:review:security-sentinel"` (technical focus) — review for ReDoS in correction/friction patterns (`\s*` and `\w+` quantifiers in Bash regex), user message injection into queue file (quote/special char escaping in `printf`?), `.correction-ignore` pattern injection, path traversal via crafted `cwd`, `head -c` 200-char truncation safety (macOS vs Linux). ReDoS and injection findings are Critical by default.
+
+- [ ] Stage 8 — Synthesize security findings: Read both outputs. Deduplicate. Create consolidated list. Write security summary to review log.
+
+- [ ] Stage 9 — Fix security findings: Fix all Critical, High, and Medium findings autonomously (escalate if design-changing). Add security tests.
+
+- [ ] Stage 10 — Final verification: Run all test suites (phases 03-07). All must pass. Verify `user-prompt-submit.sh` produces valid JSON for normal prompts. Verify `plugin.json` version is `"0.9.0"`. Write final status to review log. Commit any remaining fixes.

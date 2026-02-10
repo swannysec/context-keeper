@@ -30,6 +30,8 @@ bash "${CLAUDE_PLUGIN_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || echo 
 
 Pass the query and any flags (`--global`, `--sessions`, `--category <name>`) directly to the script.
 
+**Note:** The corrections queue (`.claude/memory/corrections-queue.md`) is included in default project memory search scope.
+
 ## Presenting Results
 
 - Display the script output to the user as-is (it is already Markdown-formatted)
