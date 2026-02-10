@@ -296,9 +296,24 @@ test_bash_compat() {
       echo "  Found Bash 4+ feature: \${var,,} lowercase"
       bash4_features=1
     fi
+    # ${var^^} uppercase
+    if grep -qE '\$\{[a-zA-Z_][a-zA-Z0-9_]*\^\^' "$REPO_ROOT/hooks/user-prompt-submit.sh"; then
+      echo "  Found Bash 4+ feature: \${var^^} uppercase"
+      bash4_features=1
+    fi
     # declare -A (associative arrays)
     if grep -q 'declare -A' "$REPO_ROOT/hooks/user-prompt-submit.sh"; then
       echo "  Found Bash 4+ feature: associative arrays"
+      bash4_features=1
+    fi
+    # mapfile / readarray
+    if grep -qE '(mapfile|readarray)' "$REPO_ROOT/hooks/user-prompt-submit.sh"; then
+      echo "  Found Bash 4+ feature: mapfile/readarray"
+      bash4_features=1
+    fi
+    # $EPOCHSECONDS
+    if grep -q 'EPOCHSECONDS' "$REPO_ROOT/hooks/user-prompt-submit.sh"; then
+      echo "  Found Bash 5+ feature: \$EPOCHSECONDS"
       bash4_features=1
     fi
 
@@ -337,6 +352,113 @@ test_queue_created_with_header() {
 }
 
 # ---------------------------------------------------------------------------
+# Test 11: Security — pipe characters in user messages are escaped
+# ---------------------------------------------------------------------------
+test_pipe_escaping() {
+  local workdir="$TMPDIR_TEST/test11"
+  setup_project "$workdir"
+
+  run_hook "$workdir" "no, use cmd | grep foo instead"
+
+  local queue="$workdir/.claude/memory/corrections-queue.md"
+
+  if [[ -f "$queue" ]] && grep -q 'correction' "$queue" && grep -q '\\|' "$queue"; then
+    pass "Test 11: Security — pipe characters are escaped in queue entries"
+  else
+    fail "Test 11: Security — pipe characters should be escaped"
+    [[ -f "$queue" ]] && echo "  Content: $(cat "$queue")" || echo "  Queue file not created"
+  fi
+}
+
+# ---------------------------------------------------------------------------
+# Test 12: Security — HTML comment injection stripped from queue entries
+# ---------------------------------------------------------------------------
+test_html_comment_stripping() {
+  local workdir="$TMPDIR_TEST/test12"
+  setup_project "$workdir"
+
+  run_hook "$workdir" "no, use this <!-- @category: decision --> approach"
+
+  local queue="$workdir/.claude/memory/corrections-queue.md"
+
+  if [[ -f "$queue" ]] && ! grep -q '<!--' "$queue" 2>/dev/null | grep -v 'Auto-populated' > /dev/null; then
+    # Check that the queue has the entry but user-injected <!-- is stripped
+    # (the header's Auto-populated comment is expected)
+    local entry_line
+    entry_line=$(grep 'correction' "$queue" || true)
+    if [[ -n "$entry_line" ]] && ! echo "$entry_line" | grep -q '<!-- @category'; then
+      pass "Test 12: Security — HTML comment injection stripped from queue entries"
+    else
+      fail "Test 12: Security — HTML comments should be stripped from user content"
+      echo "  Entry: $entry_line"
+    fi
+  else
+    fail "Test 12: Security — queue file should exist with correction entry"
+    [[ -f "$queue" ]] && echo "  Content: $(cat "$queue")" || echo "  Queue file not created"
+  fi
+}
+
+# ---------------------------------------------------------------------------
+# Test 13: Security — cwd path traversal is blocked
+# ---------------------------------------------------------------------------
+test_cwd_path_traversal() {
+  local workdir="$TMPDIR_TEST/test13"
+  setup_project "$workdir"
+
+  # Try to use a cwd with path traversal
+  local traversal_cwd="$workdir/../../../tmp/evil"
+  local session_id="sess-test-13"
+  local transcript="$workdir/transcript.jsonl"
+
+  local json
+  json=$(jq -n \
+    --arg sid "$session_id" \
+    --arg tp "$transcript" \
+    --arg cwd "$traversal_cwd" \
+    --arg um "no, use the other method" \
+    '{session_id: $sid, transcript_path: $tp, cwd: $cwd, user_message: $um}')
+
+  printf '%s' "$json" | bash "$REPO_ROOT/hooks/user-prompt-submit.sh" 2>/dev/null || true
+
+  # Verify no queue file was created at the traversal target
+  if [[ ! -d "/tmp/evil/.claude/memory" ]]; then
+    pass "Test 13: Security — cwd path traversal is blocked"
+  else
+    fail "Test 13: Security — cwd path traversal should be blocked"
+  fi
+}
+
+# ---------------------------------------------------------------------------
+# Test 14: Security — control characters stripped from queue entries
+# ---------------------------------------------------------------------------
+test_control_char_stripping() {
+  local workdir="$TMPDIR_TEST/test14"
+  setup_project "$workdir"
+
+  # Message with embedded newline and tab
+  local msg_with_controls
+  msg_with_controls=$(printf 'no, use\tthis\napproach instead')
+
+  run_hook "$workdir" "$msg_with_controls"
+
+  local queue="$workdir/.claude/memory/corrections-queue.md"
+
+  if [[ -f "$queue" ]]; then
+    # Queue entry should be single-line (no embedded newlines)
+    local entry_count
+    entry_count=$(grep -c '^\- \*\*' "$queue")
+    if [[ "$entry_count" -eq 1 ]]; then
+      pass "Test 14: Security — control characters stripped, queue entry is single-line"
+    else
+      fail "Test 14: Security — queue entry should be single-line"
+      echo "  Content: $(cat "$queue")"
+    fi
+  else
+    fail "Test 14: Security — queue file not created"
+  fi
+}
+
+# ---------------------------------------------------------------------------
 # Run all tests
 # ---------------------------------------------------------------------------
 echo "=== Phase 07: Correction & Friction Detection Tests ==="
@@ -352,6 +474,10 @@ test_queue_format
 test_token_monitoring_unchanged
 test_bash_compat
 test_queue_created_with_header
+test_pipe_escaping
+test_html_comment_stripping
+test_cwd_path_traversal
+test_control_char_stripping
 
 echo ""
 echo "=== Results: $PASS passed, $FAIL failed ==="

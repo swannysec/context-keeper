@@ -112,9 +112,9 @@ fast first-pass; `/memory-reflect` uses facets for accurate second-pass analysis
 Create `.correction-ignore` in project root to suppress specific patterns:
 ```
 # Patterns to never flag as corrections
-# One line per pattern, matched case-insensitively
-try again with.*verbose
+# One line per literal substring, matched case-insensitively
 no worries
+try again with verbose
 ```
 
 ## Privacy Tags

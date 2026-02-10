@@ -29,6 +29,32 @@ Review the conversation for:
 - **Questions resolved:** Previously open questions now answered
 - **Questions raised:** New questions that emerged
 
+### 2.5. Process Corrections Queue
+
+Check if `.claude/memory/corrections-queue.md` exists and has entries.
+
+If it has entries:
+1. Read the queue file
+2. For each queued item, suggest routing to the appropriate memory file:
+   - Code conventions, naming, style → `patterns.md` (under Code Conventions)
+   - Architecture choices, design decisions → `decisions/ADR-NNN-*.md` (create new ADR)
+   - Terminology corrections → `glossary.md`
+   - General preferences, project context → `product-context.md`
+   - Workflow preferences → `active-context.md`
+3. Include the suggested routing in Step 3's proposed update output
+4. Add a category tag to each routed item:
+   - Corrections about conventions → `<!-- @category: convention -->`
+   - Corrections about decisions → `<!-- @category: decision -->`
+   - Corrections about patterns → `<!-- @category: pattern -->`
+   - Friction about bugs → `<!-- @category: bugfix -->`
+   - Other → `<!-- @category: learning -->`
+5. User approves, modifies, or rejects each item
+6. Approved items are written to target files with category tags
+7. Rejected items are removed from queue
+8. After processing, clear the queue file (replace contents with just the header)
+9. If any corrections were processed, append to Step 5 output:
+   "Corrections processed. Consider running /memory-reflect for deeper analysis."
+
 ### 3. Propose Updates
 
 Present changes to user before applying:
@@ -140,7 +166,7 @@ ConKeeper's UserPromptSubmit hook monitors context window usage. When usage exce
 1. UserPromptSubmit hook detects context usage >= threshold
 2. Hook injects `additionalContext` with sync instructions
 3. AI assistant detects `<conkeeper-auto-sync>` tag
-4. Assistant runs Steps 1, 2, 4 of the sync workflow (skipping Step 3 approval)
+4. Assistant runs Steps 1, 2, 2.5, 4 of the sync workflow (skipping Step 3 approval)
 5. Assistant completes the user's original task
 6. Response ends with the auto-sync completion marker
 

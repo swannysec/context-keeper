@@ -263,7 +263,10 @@ UserPromptSubmit hook. Processed during /memory-sync, then cleared.
 ```
 
 **Lifecycle:** Auto-populated by hook → processed by /memory-sync → cleared after processing.
-Items are ephemeral and not meant for long-term storage.
+Items are ephemeral and not meant for long-term storage. Not loaded into context at session start.
+
+**Hook contract note:** The UserPromptSubmit hook reads `user_message` from the hook input JSON.
+If the Claude Code runtime does not provide this field, detection is silently skipped (graceful degradation).
 
 ## Validation Rules
 
@@ -537,10 +540,10 @@ Patterns are matched case-insensitively against the full user prompt text.
 
 Example:
 ```
-# Patterns to never flag as corrections
-try again with.*verbose
+# Patterns to never flag as corrections (literal substring match, not regex)
 no worries
 that's fine
+try again with verbose
 ```
 
 ## Security Considerations
