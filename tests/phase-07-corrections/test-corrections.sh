@@ -266,8 +266,15 @@ test_token_monitoring_unchanged() {
   local flag_dir="${TMPDIR:-/tmp}/conkeeper"
   rm -f "$flag_dir/synced-sess-test-08" "$flag_dir/blocked-sess-test-08"
 
+  # Use a fake HOME to isolate from real ~/.claude/settings.json
+  # (Phase 09 auto-detection would read the real model and change window size)
+  local fake_home="$TMPDIR_TEST/home8"
+  mkdir -p "$fake_home/.claude"
+  local orig_home="$HOME"
+
   local output
-  output=$(run_hook "$workdir" "just a normal prompt" "sess-test-08")
+  HOME="$fake_home" output=$(run_hook "$workdir" "just a normal prompt" "sess-test-08")
+  HOME="$orig_home"
 
   # Should produce JSON with hookSpecificOutput (auto-sync nudge at 65% usage)
   if echo "$output" | jq -e '.hookSpecificOutput.hookEventName' &>/dev/null; then

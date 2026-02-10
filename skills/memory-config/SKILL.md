@@ -32,7 +32,7 @@ View and modify ConKeeper configuration for the current project.
 | `output_style` | quiet/normal/explanatory | Output verbosity |
 | `auto_sync_threshold` | 0-100 (default: 60) | Context % to trigger auto memory-sync |
 | `hard_block_threshold` | 0-100 (default: 80) | Context % to block prompts until sync |
-| `context_window_tokens` | integer (default: 200000) | Context window size in tokens |
+| `context_window_tokens` | integer (default: 200000) | Context window size in tokens. Auto-detected from model if not set. |
 | `correction_sensitivity` | low/medium (default: low) | Regex sensitivity for correction detection |
 
 ## Workflow
@@ -52,7 +52,7 @@ Check for `.claude/memory/.memory-config.md`:
 > - Output style: [quiet/normal/explanatory] (default: normal)
 > - Auto-sync threshold: [0-100] (default: 60)
 > - Hard-block threshold: [0-100] (default: 80)
-> - Context window tokens: [integer] (default: 200000)
+> - Context window tokens: [integer] (default: auto-detected from model, fallback: 200000)
 > - Observation hook: [true/false] (default: true)
 > - Observation detail: [full/stubs_only/off] (default: full)
 > - Correction sensitivity: [low/medium] (default: low)
@@ -92,6 +92,11 @@ auto_reflect: true
 - `full`: Full entries for Bash/external tools, stub entries for native tools
 - `stubs_only`: Stub entries for all tools (timestamp, tool, type, path, status only)
 - `off`: No observation logging (same as `observation_hook: false`)
+
+> **Auto-detection:** If `context_window_tokens` is not explicitly set, ConKeeper reads
+> `~/.claude/settings.json` to detect the active model's context window. Models with
+> the `[1m]` variant (e.g., `opus[1m]`) use a 1,000,000 token window. All others
+> default to 200,000. Set `context_window_tokens` explicitly to override auto-detection.
 
 ## Correction Detection Settings
 

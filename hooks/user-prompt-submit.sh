@@ -81,8 +81,10 @@ fi
 # Defaults
 auto_sync_threshold=60
 hard_block_threshold=80
-context_window_tokens=200000
+context_window_tokens=200000  # Default; overridden by .memory-config.md or auto-detected from model
 correction_sensitivity=low
+
+config_had_explicit_window=false
 
 # Try to read config from project's .memory-config.md
 config_file="${cwd:-.}/.claude/memory/.memory-config.md"
@@ -123,7 +125,11 @@ if [[ -f "$config_file" ]]; then
         }
         auto_sync_threshold=$(parse_yaml_int "auto_sync_threshold" "$auto_sync_threshold")
         hard_block_threshold=$(parse_yaml_int "hard_block_threshold" "$hard_block_threshold")
-        context_window_tokens=$(parse_yaml_int "context_window_tokens" "$context_window_tokens")
+        parsed_window=$(parse_yaml_int "context_window_tokens" "")
+        if [[ -n "$parsed_window" ]]; then
+            context_window_tokens=$parsed_window
+            config_had_explicit_window=true
+        fi
         # Parse string YAML values (for correction_sensitivity)
         parse_yaml_str() {
             local key="$1"
@@ -137,6 +143,19 @@ if [[ -f "$config_file" ]]; then
             fi
         }
         correction_sensitivity=$(parse_yaml_str "correction_sensitivity" "low")
+    fi
+fi
+
+# --- Auto-detect context window from model ---
+
+settings_file="$HOME/.claude/settings.json"
+if [[ "$config_had_explicit_window" != "true" ]] && [[ -f "$settings_file" ]] && [[ ! -L "$settings_file" ]]; then
+    model_value=$(jq -r '.model // empty' "$settings_file" 2>/dev/null) || model_value=""
+    if [[ -n "$model_value" ]]; then
+        case "$model_value" in
+            *\[1m\]*) context_window_tokens=1000000 ;;
+            # Default 200K for all other variants — already set
+        esac
     fi
 fi
 

@@ -5,6 +5,16 @@ All notable changes to ConKeeper will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] — 2026-02-10
+
+### Added
+- **Context window auto-detection:** Reads `~/.claude/settings.json` to detect
+  the active model's context window size (200K vs 1M). Eliminates premature
+  sync/block warnings when using 1M context models.
+
+### Changed
+- `context_window_tokens` config setting is now optional — auto-detected if not set
+
 ## [1.0.0] - 2026-02-09
 
 ### Added
