@@ -13,6 +13,12 @@ ConKeeper replaces database-backed context management with simple, version-contr
 - **SessionStart hook** - Automatic memory awareness at session start
 - **Context preservation hooks** - Automatic memory-sync before context compaction
 - **Skills + commands** - Easy memory initialization, sync, and session handoff
+- **Category tags** - Structured `<!-- @category: ... -->` tags for filtering and search
+- **Privacy tags** - `<private>` blocks and file-level privacy for sensitive content
+- **Observation hook** - Automatic tool usage logging via PostToolUse hook
+- **Correction detection** - Real-time detection of user corrections and friction signals
+- **Session retrospection** - After Action Review workflow via `/memory-reflect`
+- **Facets integration** - Claude Code session analytics for friction and satisfaction trends
 
 ## Installation
 
@@ -86,6 +92,9 @@ This project uses ConKeeper for persistent AI context management.
 - **memory-init** - Initialize memory for this project
 - **memory-sync** - Sync session state to memory files
 - **session-handoff** - Generate handoff for new session
+- **memory-search** - Search memory files by keyword or category
+- **memory-reflect** - Session retrospection and improvement analysis
+- **memory-insights** - Session friction trends and success pattern analysis
 
 **Memory Files:**
 - `active-context.md` - Current focus and state
@@ -129,6 +138,10 @@ See [docs/platform-guides/](docs/platform-guides/) for detailed platform instruc
 | `/memory-init` | Initialize memory for current project |
 | `/memory-sync` | Sync current session state to memory files |
 | `/session-handoff` | Generate handoff prompt for new session |
+| `/memory-search` | Search memory files by keyword or category |
+| `/memory-config` | View and modify ConKeeper configuration |
+| `/memory-reflect` | Session retrospection using After Action Review methodology |
+| `/memory-insights` | Analyze session friction trends and success patterns (Claude Code) |
 
 ### Memory Structure
 
@@ -182,9 +195,17 @@ Thresholds are configurable per-project in `.claude/memory/.memory-config.md`:
 
 ```yaml
 ---
+suggest_memories: true        # Whether to suggest memory additions (default: true)
+auto_load: true               # Auto-load memory at session start (default: true)
+output_style: normal          # quiet | normal | explanatory (default: normal)
+token_budget: standard        # economy | light | standard | detailed (default: standard)
 auto_sync_threshold: 60       # When to auto-sync (default: 60)
 hard_block_threshold: 80      # When to block until manual sync (default: 80)
 context_window_tokens: 200000 # Context window size (default: 200000)
+observation_hook: true        # Enable/disable PostToolUse observation logging (default: true)
+observation_detail: full      # full | stubs_only | off (default: full)
+correction_sensitivity: low   # low | medium — correction detection sensitivity (default: low)
+auto_reflect: true            # Auto-trigger /memory-reflect after /memory-sync (default: true)
 ---
 ```
 

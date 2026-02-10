@@ -17,6 +17,7 @@ Thumbs.db
 # Development artifacts
 PLAN.md
 TEST-PROMPT.md
+Auto Run Docs/
 
 # Node (if testing)
 node_modules/

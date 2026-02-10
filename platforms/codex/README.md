@@ -46,8 +46,11 @@ This project uses ConKeeper for persistent AI context management.
 
 **Available Workflows:**
 - **memory-init** - Initialize memory for this project
-- **memory-sync** - Sync session state to memory files  
+- **memory-sync** - Sync session state to memory files
 - **session-handoff** - Generate handoff for new session
+- **memory-search** - Search memory files by keyword or category
+- **memory-reflect** - Session retrospection and improvement analysis
+- **memory-insights** - Session friction trends and success pattern analysis
 
 For full documentation: https://github.com/swannysec/context-keeper
 <!-- /ConKeeper -->

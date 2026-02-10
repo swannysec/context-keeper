@@ -18,7 +18,8 @@ fi
 
 # --- Parse hook input ---
 
-input=$(cat)
+# Cap stdin at 1MB to prevent excessive memory use from large payloads
+input=$(head -c 1048576)
 session_id=$(printf '%s' "$input" | jq -r '.session_id // empty')
 transcript_path=$(printf '%s' "$input" | jq -r '.transcript_path // empty')
 cwd=$(printf '%s' "$input" | jq -r '.cwd // empty')
@@ -26,6 +27,11 @@ cwd=$(printf '%s' "$input" | jq -r '.cwd // empty')
 # Validate session_id (security: prevents path traversal in flag file paths)
 if [[ -z "$session_id" ]] || ! [[ "$session_id" =~ ^[a-zA-Z0-9_-]+$ ]]; then
     exit 0
+fi
+
+# Validate and resolve cwd (security: prevents path traversal and symlink escape)
+if [[ -n "$cwd" ]]; then
+    cwd=$(cd "$cwd" 2>/dev/null && pwd) || exit 0
 fi
 
 # Validate transcript exists and is readable
@@ -37,6 +43,7 @@ fi
 
 FLAG_DIR="${TMPDIR:-/tmp}/conkeeper"
 mkdir -p "$FLAG_DIR"
+chmod 700 "$FLAG_DIR" 2>/dev/null || true
 
 SYNC_FLAG="$FLAG_DIR/synced-${session_id}"
 BLOCK_FLAG="$FLAG_DIR/blocked-${session_id}"
@@ -75,6 +82,7 @@ fi
 auto_sync_threshold=60
 hard_block_threshold=80
 context_window_tokens=200000
+correction_sensitivity=low
 
 # Try to read config from project's .memory-config.md
 config_file="${cwd:-.}/.claude/memory/.memory-config.md"
@@ -116,6 +124,122 @@ if [[ -f "$config_file" ]]; then
         auto_sync_threshold=$(parse_yaml_int "auto_sync_threshold" "$auto_sync_threshold")
         hard_block_threshold=$(parse_yaml_int "hard_block_threshold" "$hard_block_threshold")
         context_window_tokens=$(parse_yaml_int "context_window_tokens" "$context_window_tokens")
+        # Parse string YAML values (for correction_sensitivity)
+        parse_yaml_str() {
+            local key="$1"
+            local default="$2"
+            local val
+            val=$(printf '%s' "$frontmatter" | awk -F': *' -v k="$key" '$1 == k { gsub(/^[ \t]+|[ \t]+$/, "", $2); print $2 }')
+            if [[ -n "$val" ]]; then
+                printf '%s' "$val"
+            else
+                printf '%s' "$default"
+            fi
+        }
+        correction_sensitivity=$(parse_yaml_str "correction_sensitivity" "low")
+    fi
+fi
+
+# --- Correction & Friction Detection ---
+
+# Extract user message from hook input
+user_message=$(printf '%s' "$input" | jq -r '.user_message // empty')
+
+if [[ -n "$user_message" ]]; then
+    # Validate correction_sensitivity value
+    case "$correction_sensitivity" in
+        low|medium) ;; # valid
+        *) correction_sensitivity="low" ;;
+    esac
+
+    # Truncate for regex matching — corrections appear early in a message (cap at 1000 chars)
+    user_message_short=$(printf '%.1000s' "$user_message")
+    # Lowercase for case-insensitive matching
+    user_message_lower=$(printf '%s' "$user_message_short" | tr '[:upper:]' '[:lower:]')
+
+    # Define correction regex patterns (conservative/low sensitivity)
+    # Note: patterns match against lowercased user message
+    CORRECTION_PATTERNS=(
+        '(^|[[:space:]])no[,. ]+[[:space:]]*(use|do|try|it[[:space:]]+should)'
+        '^[[:space:]]*actually[,. ]'
+        "that'?s[[:space:]]+(wrong|incorrect|not[[:space:]]+right)"
+        'i[[:space:]]+(said|meant|asked[[:space:]]+for)'
+        "(not|don'?t)[[:space:]]+[a-zA-Z0-9_]+[,. ]+[[:space:]]*(instead|use|do|try)"
+    )
+
+    # Define friction regex patterns (conservative/low sensitivity)
+    FRICTION_PATTERNS=(
+        "(didn'?t|doesn'?t|not)[[:space:]]+work"
+        '(try[[:space:]]+again|redo|start[[:space:]]+over)'
+        'wrong[[:space:]]+(approach|file|method|function|path|directory)'
+        "(let'?s[[:space:]]+revert|undo[[:space:]]+that|go[[:space:]]+back)"
+        'still[[:space:]]+(broken|failing|erroring|crashing)'
+    )
+
+    # Medium sensitivity: add looser patterns
+    if [[ "$correction_sensitivity" == "medium" ]]; then
+        CORRECTION_PATTERNS+=('instead' 'should[[:space:]]+be' 'rather' 'prefer')
+        FRICTION_PATTERNS+=('not[[:space:]]+what' 'different[[:space:]]+from')
+    fi
+
+    # Suppression — read .correction-ignore file
+    # Note: patterns are glob-matched as substrings. Glob metacharacters (*, ?, [...])
+    # in patterns will be interpreted. A pattern of "*" would suppress all corrections.
+    IGNORE_FILE="${cwd:-.}/.correction-ignore"
+    check_suppression() {
+        local text_lower="$1"  # expects pre-lowercased text
+        if [[ -f "$IGNORE_FILE" ]]; then
+            # Security: refuse to read through symlinks
+            [[ -L "$IGNORE_FILE" ]] && return 1
+            # Limit to first 1000 lines to prevent DoS from large ignore files
+            while IFS= read -r pattern || [[ -n "$pattern" ]]; do
+                [[ "$pattern" =~ ^#.*$ ]] && continue  # skip comments
+                [[ -z "$pattern" ]] && continue          # skip empty lines
+                local pattern_lower
+                pattern_lower=$(printf '%s' "$pattern" | tr '[:upper:]' '[:lower:]')
+                if [[ "$text_lower" == *"$pattern_lower"* ]]; then
+                    return 0  # suppressed
+                fi
+            done < <(head -n 1000 "$IGNORE_FILE")
+        fi
+        return 1  # not suppressed
+    }
+
+    # Pattern matching loop (match against lowercased message)
+    detected_type=""
+    for pattern in "${CORRECTION_PATTERNS[@]}"; do
+        if [[ "$user_message_lower" =~ $pattern ]]; then
+            detected_type="correction"
+            break
+        fi
+    done
+    if [[ -z "$detected_type" ]]; then
+        for pattern in "${FRICTION_PATTERNS[@]}"; do
+            if [[ "$user_message_lower" =~ $pattern ]]; then
+                detected_type="friction"
+                break
+            fi
+        done
+    fi
+
+    # Queue entry (if detected and not suppressed)
+    if [[ -n "$detected_type" ]]; then
+        if ! check_suppression "$user_message_lower"; then
+            queue_file="${cwd:-.}/.claude/memory/corrections-queue.md"
+            if [[ -d "${cwd:-.}/.claude/memory" ]]; then
+                # Security: refuse to write through symlinks
+                [[ -L "$queue_file" ]] && exit 0
+                # Create queue file with header atomically (noclobber prevents race conditions)
+                if [[ ! -f "$queue_file" ]]; then
+                    (set -o noclobber; printf '# Corrections Queue\n<!-- Auto-populated by ConKeeper UserPromptSubmit hook -->\n\n' > "$queue_file") 2>/dev/null || true
+                fi
+                # Truncate to 200 chars, strip control chars, escape markdown metacharacters, strip HTML comments
+                truncated_msg=$(printf '%s' "$user_message" | cut -c1-200 | tr -d '\000-\037' | sed 's/|/\\|/g; s/"/\\"/g; s/`/'"'"'/g; s/<!--//g; s/-->//g')
+                timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+                printf -- '- **%s** | %s | "%s" | ref: previous assistant message\n' \
+                    "$timestamp" "$detected_type" "$truncated_msg" >> "$queue_file"
+            fi
+        fi
     fi
 fi
 

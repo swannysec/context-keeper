@@ -5,6 +5,52 @@ All notable changes to ConKeeper will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] - 2026-02-09
+
+### Added
+
+- **Category tags** (Phase 03) — structured `<!-- @category: ... -->` tags for filtering and search
+  - Memory categories: `decision`, `pattern`, `bugfix`, `convention`, `learning`
+  - Retrospective categories: `efficiency`, `quality`, `ux`, `knowledge`, `architecture`
+  - Freeform `<!-- @tag: ... -->` tags for custom classification
+  - Auto-categorization during `/memory-sync`
+- **Privacy tags** (Phase 04) — `<private>` blocks and file-level `private: true` for sensitive content
+  - Enforced across all code paths: SessionStart, sync, search, reflect
+  - `.correction-ignore` file for suppressing false-positive correction detections
+- **`/memory-search`** (Phase 05) — search memory files by keyword, category, or tag
+  - `--global`, `--sessions`, `--category` flags for targeted search
+- **Observation hook** (Phase 06) — PostToolUse hook logs tool usage to daily observation file
+  - Full entries for external tools (Bash, WebFetch, etc.), stub entries for native tools
+  - Configurable via `observation_hook` and `observation_detail` settings
+- **Correction detection** (Phase 07) — UserPromptSubmit hook detects user corrections and friction
+  - Real-time regex-based detection with configurable sensitivity (`low`/`medium`)
+  - Corrections queue processed during `/memory-sync`
+- **`/memory-reflect`** (Phase 08) — session retrospection using 7-phase After Action Review methodology
+  - Consumes corrections, observations, session data, and Claude Code facets
+  - Generates improvement recommendations with approval routing
+  - Produces session retrospective files with evidence summary
+- **`/memory-insights`** (Phase 08) — session friction trends and success pattern analysis
+  - Dashboard, friction deep-dive, best/worst sessions, cross-session pattern analysis
+  - Powered by Claude Code facets data (graceful degradation when unavailable)
+- **Stop hook** — suggests `/memory-reflect` at session end when corrections or observations exist
+- **New configuration options:** `observation_hook`, `observation_detail`, `correction_sensitivity`, `auto_reflect`
+
+### Changed
+
+- Version bumped from 0.4.0 to 1.0.0 (all planned features complete)
+- `/memory-sync` now processes corrections queue (Step 2.5) and auto-categorizes entries (Step 2.6)
+- `/memory-sync` conditionally triggers `/memory-reflect` after sync when `auto_reflect: true` and corrections were processed
+- `/memory-config` expanded with observation, correction, and reflection settings
+- Schema documentation updated with retro file format, external data sources, and privacy enforcement table
+- Platform adapter snippets updated with all 6 available workflows
+- `hooks/hooks.json` now registers 5 hooks: SessionStart, UserPromptSubmit, PreCompact, PostToolUse, Stop
+
+### Notes
+
+- **Upgrading from v0.4.x:** The `auto_reflect` setting defaults to `true`, meaning `/memory-reflect` will automatically run after `/memory-sync` when corrections are detected. Set `auto_reflect: false` in `.memory-config.md` to disable this behavior.
+- Facets data integration is Claude Code-specific and degrades gracefully on other platforms
+- All 73 tests pass across 6 test suites (Phases 03-08)
+
 ## [0.4.0] - 2026-02-06
 
 ### Added

@@ -97,6 +97,10 @@ Memory is stored in `.claude/memory/` with the following structure:
    - Check recent entries in `decisions/`
 
 2. **Analyze Session**
+   **Privacy:** When analyzing memory files, skip any content within `<private>...</private>` blocks.
+   Do not reference, move, or modify private content. Do not include private content in sync summaries.
+   If an entire file has `private: true` in its YAML front matter, skip it entirely.
+
    Review conversation for:
    - Decisions made
    - Tasks completed/started
@@ -200,6 +204,44 @@ Memory is stored in `.claude/memory/` with the following structure:
    ```
 
 4. **Confirm handoff complete**
+
+---
+
+## Workflow: memory-search
+
+**Purpose:** Search memory files for keywords, patterns, or past decisions.
+
+### Steps:
+
+1. **Parse Search Request**
+   Extract the query and optional flags:
+   - `--global` — include `~/.claude/memory/`
+   - `--sessions` — include session files (last 30 days)
+   - `--category <name>` — filter to entries with matching category tag
+
+2. **Execute Search**
+   Run the search script:
+   ```bash
+   bash <conkeeper-path>/tools/memory-search.sh <query> [--global] [--sessions] [--category <name>]
+   ```
+
+3. **Present Results**
+   - Display output as-is (already Markdown-formatted)
+   - Note match count and file count
+
+4. **Handle No Results**
+   If no results, suggest:
+   - Try `--global` for cross-project search
+   - Try `--sessions` for session history
+   - Try alternate keywords
+   - Remove `--category` filter
+
+### Examples:
+```
+/memory-search "token budget"
+/memory-search --global "naming convention"
+/memory-search --category decision "database"
+```
 
 ---
 

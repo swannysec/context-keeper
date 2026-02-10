@@ -33,6 +33,7 @@ View and modify ConKeeper configuration for the current project.
 | `auto_sync_threshold` | 0-100 (default: 60) | Context % to trigger auto memory-sync |
 | `hard_block_threshold` | 0-100 (default: 80) | Context % to block prompts until sync |
 | `context_window_tokens` | integer (default: 200000) | Context window size in tokens |
+| `correction_sensitivity` | low/medium (default: low) | Regex sensitivity for correction detection |
 
 ## Workflow
 
@@ -49,18 +50,17 @@ Check for `.claude/memory/.memory-config.md`:
 > - Suggest memories: [true/false] (default: true)
 > - Auto load: [true/false] (default: true)
 > - Output style: [quiet/normal/explanatory] (default: normal)
+> - Auto-sync threshold: [0-100] (default: 60)
+> - Hard-block threshold: [0-100] (default: 80)
+> - Context window tokens: [integer] (default: 200000)
+> - Observation hook: [true/false] (default: true)
+> - Observation detail: [full/stubs_only/off] (default: full)
+> - Correction sensitivity: [low/medium] (default: low)
+> - Auto-reflect: [true/false] (default: true)
 
 ### Step 3: Ask What to Change
 
-> What would you like to change?
-> 1. Token budget preset
-> 2. Suggest memories setting
-> 3. Auto load setting
-> 4. Output style
-> 5. Nothing (exit)
-> 6. Auto-sync threshold
-> 7. Hard-block threshold
-> 8. Context window size
+Ask the user which setting they'd like to change, or whether they're done. Accept natural language responses (e.g., "change output style to quiet", "disable auto-reflect").
 
 ### Step 4: Apply Changes
 
@@ -75,8 +75,59 @@ output_style: normal
 auto_sync_threshold: 60
 hard_block_threshold: 80
 context_window_tokens: 200000
+observation_hook: true
+observation_detail: full
+correction_sensitivity: low
+auto_reflect: true
 ---
 ```
+
+## Observation Hook Settings
+
+| Setting | Default | Options | Description |
+|---------|---------|---------|-------------|
+| `observation_hook` | `true` | `true`, `false` | Enable/disable PostToolUse observation logging |
+| `observation_detail` | `full` | `full`, `stubs_only`, `off` | Detail level for observation entries |
+
+- `full`: Full entries for Bash/external tools, stub entries for native tools
+- `stubs_only`: Stub entries for all tools (timestamp, tool, type, path, status only)
+- `off`: No observation logging (same as `observation_hook: false`)
+
+## Correction Detection Settings
+
+| Setting | Default | Options | Description |
+|---------|---------|---------|-------------|
+| `correction_sensitivity` | `low` | `low`, `medium` | Regex sensitivity for detecting user corrections and friction |
+
+- `low`: Conservative patterns only (fewer false positives, higher precision)
+- `medium`: Adds looser patterns like "instead", "should be", "rather"
+
+Note: `high` sensitivity was intentionally omitted — Claude Code's facets data
+provides higher-accuracy retrospective friction classification. This hook is a
+fast first-pass; `/memory-reflect` uses facets for accurate second-pass analysis.
+
+Create `.correction-ignore` in project root to suppress specific patterns:
+```
+# Patterns to never flag as corrections
+# One line per literal substring, matched case-insensitively
+no worries
+try again with verbose
+```
+
+## Reflection Settings
+
+| Setting | Default | Options | Description |
+|---------|---------|---------|-------------|
+| `auto_reflect` | `true` | `true`, `false` | Auto-trigger /memory-reflect after /memory-sync |
+
+Session depth (LIGHTWEIGHT vs STANDARD) is auto-detected based on observation and correction counts.
+
+## Privacy Tags
+
+Privacy tags are always enforced — there is no configuration toggle.
+- Wrap sensitive content in `<private>...</private>` tags
+- Add `private: true` to YAML front matter for entire-file privacy
+- Private content is excluded from context injection, search, sync, and reflection
 
 ### Step 5: Confirm
 
