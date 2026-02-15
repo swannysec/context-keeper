@@ -34,6 +34,8 @@ View and modify ConKeeper configuration for the current project.
 | `hard_block_threshold` | 0-100 (default: 80) | Context % to block prompts until sync |
 | `context_window_tokens` | integer (default: 200000) | Context window size in tokens. Auto-detected from model if not set. |
 | `correction_sensitivity` | low/medium (default: low) | Regex sensitivity for correction detection |
+| `staleness_commits` | integer (default: 5, 0 = disable) | Commits since last file update before flagging memory as stale |
+| `project_search_paths` | absent=off, disabled=permanently off, array=active | Parent directories to search for cross-project memory |
 
 ## Workflow
 
@@ -57,6 +59,8 @@ Check for `.claude/memory/.memory-config.md`:
 > - Observation detail: [full/stubs_only/off] (default: full)
 > - Correction sensitivity: [low/medium] (default: low)
 > - Auto-reflect: [true/false] (default: true)
+> - Staleness commits: [integer] (default: 5, 0 = disable)
+> - Project search paths: [absent/disabled/paths] (default: absent)
 
 ### Step 3: Ask What to Change
 
@@ -79,6 +83,8 @@ observation_hook: true
 observation_detail: full
 correction_sensitivity: low
 auto_reflect: true
+staleness_commits: 5
+# project_search_paths: ["~/zed", "~/work"]  # absent = off, disabled = permanently off
 ---
 ```
 

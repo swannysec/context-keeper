@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ConKeeper Memory Search Script
 # Cross-platform search tool for memory files with privacy and category filtering.
-# Usage: bash tools/memory-search.sh <query> [--global] [--sessions] [--category <name>]
+# Usage: bash tools/memory-search.sh <query> [--global] [--sessions] [--category <name>] [--cross-project]
 
 set -euo pipefail
 
@@ -16,6 +16,7 @@ QUERY=""
 INCLUDE_GLOBAL=false
 INCLUDE_SESSIONS=false
 CATEGORY_FILTER=""
+CROSS_PROJECT=false
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -34,6 +35,10 @@ while [ $# -gt 0 ]; do
             fi
             CATEGORY_FILTER="$2"
             shift 2
+            ;;
+        --cross-project)
+            CROSS_PROJECT=true
+            shift
             ;;
         --)
             shift
@@ -62,9 +67,12 @@ if [ $# -gt 0 ] && [ -z "$QUERY" ]; then
 fi
 
 if [ -z "$QUERY" ]; then
-    echo "Usage: memory-search.sh <query> [--global] [--sessions] [--category <name>]" >&2
+    echo "Usage: memory-search.sh <query> [--global] [--sessions] [--category <name>] [--cross-project]" >&2
     exit 1
 fi
+
+# Sanitize query for safe display (strip angle brackets and markdown link syntax)
+DISPLAY_QUERY=$(printf '%s' "$QUERY" | sed 's/[<>]//g; s/\](/_/g; s/\[/_/g')
 
 # ---------------------------------------------------------------------------
 # Search engine auto-detection
@@ -102,8 +110,82 @@ if [ "$INCLUDE_SESSIONS" = true ]; then
     SCOPE_DESC="$SCOPE_DESC + sessions"
 fi
 
+# Cross-project search: discover other projects under configured paths
+if [ "$CROSS_PROJECT" = true ]; then
+    # Source config library for parse_yaml_array
+    SCRIPT_DIR_MS="$(cd "$(dirname "$0")" && pwd)"
+    . "$SCRIPT_DIR_MS/../hooks/lib-config.sh"
+
+    # Read project_search_paths from config
+    config_file=".claude/memory/.memory-config.md"
+    cross_paths=""
+    if extract_frontmatter "$config_file"; then
+        # parse_yaml_array has a trailing-newline edge case; use parse_yaml_str
+        # to get the raw value then parse the array inline.
+        raw_paths=$(parse_yaml_str "project_search_paths" "")
+        if [ "$raw_paths" = "disabled" ]; then
+            cross_paths="disabled"
+        elif [ -n "$raw_paths" ]; then
+            # Strip [ ] brackets, split on commas, strip quotes/whitespace
+            cross_paths=$(printf '%s\n' "$raw_paths" | sed 's/^\[//;s/\]$//' | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//;s/^"//;s/"$//;s/^'"'"'//;s/'"'"'$//')
+        fi
+    fi
+
+    if [ -z "$cross_paths" ] || [ "$cross_paths" = "disabled" ]; then
+        echo "Cross-project search not configured. Run /memory-config to set project_search_paths." >&2
+        echo "Example: project_search_paths: [\"~/zed\", \"~/work\"]" >&2
+        exit 1
+    fi
+
+    # Get current project's resolved path for exclusion
+    current_project=$(cd ".claude/memory" 2>/dev/null && pwd) || current_project=""
+
+    while IFS= read -r search_path; do
+        [ -z "$search_path" ] && continue
+
+        # Expand tilde
+        search_path="${search_path/#\~/$HOME}"
+
+        # Validate path exists and is a directory
+        if [ ! -d "$search_path" ]; then
+            continue
+        fi
+
+        # Security: resolve path and check it doesn't escape via symlink
+        resolved_path=$(cd "$search_path" 2>/dev/null && pwd -P) || continue
+
+        # Find .claude/memory directories under this path (max depth 3)
+        while IFS= read -r mem_dir; do
+            [ -z "$mem_dir" ] && continue
+            # Resolve for comparison
+            resolved_mem=$(cd "$mem_dir" 2>/dev/null && pwd -P) || continue
+
+            # Exclude current project
+            if [ "$resolved_mem" = "$current_project" ]; then
+                continue
+            fi
+
+            # Security: ensure resolved path is under the configured parent
+            case "$resolved_mem" in
+                "$resolved_path"/*) ;;
+                *) continue ;; # Symlink escape — skip
+            esac
+
+            if [ -n "$SEARCH_DIRS" ]; then
+                SEARCH_DIRS="$SEARCH_DIRS
+$mem_dir"
+            else
+                SEARCH_DIRS="$mem_dir"
+            fi
+        done < <(find "$search_path" -maxdepth 3 -type d -name "memory" -path "*/.claude/memory" 2>/dev/null)
+    done <<EOF_CROSS
+$cross_paths
+EOF_CROSS
+    SCOPE_DESC="$SCOPE_DESC + cross-project"
+fi
+
 if [ -z "$SEARCH_DIRS" ]; then
-    echo "No results found for \"$QUERY\" in $SCOPE_DESC."
+    echo "No results found for \"$DISPLAY_QUERY\" in $SCOPE_DESC."
     echo "(No memory directories found)"
     exit 0
 fi
@@ -149,7 +231,7 @@ $SEARCH_DIRS
 EOF_DIRS
 
 if [ -z "$FILES" ]; then
-    echo "No results found for \"$QUERY\" in $SCOPE_DESC."
+    echo "No results found for \"$DISPLAY_QUERY\" in $SCOPE_DESC."
     echo "(No memory files found)"
     exit 0
 fi
@@ -221,6 +303,9 @@ OUTPUT=""
 
 while IFS= read -r filepath; do
     [ -z "$filepath" ] && continue
+
+    # Security: skip symlinked files (prevents reading outside project boundaries)
+    [ -L "$filepath" ] && continue
 
     # Skip files with private: true front matter
     if is_file_private "$filepath"; then
@@ -312,11 +397,11 @@ EOF_FILES
 # Output results
 # ---------------------------------------------------------------------------
 if [ "$TOTAL_MATCHES" -eq 0 ]; then
-    echo "No results found for \"$QUERY\" in $SCOPE_DESC."
+    echo "No results found for \"$DISPLAY_QUERY\" in $SCOPE_DESC."
     exit 0
 fi
 
-echo "## Results for: \"$QUERY\""
+echo "## Results for: \"$DISPLAY_QUERY\""
 echo "$OUTPUT"
 echo ""
 echo "---"

@@ -70,6 +70,12 @@ For LIGHTWEIGHT sessions: Auto-select PROCESS scope, skip user confirmation, and
    - Read `.claude/memory/decisions/` — don't re-recommend existing decisions
    - Use `/memory-search` to check if similar issues were flagged in past session retros
 5. Identify net-new insights vs. reinforcements of existing knowledge
+6. **Friction Pattern Check:**
+   If `.claude/memory/friction.md` exists:
+   - Read friction.md conventions
+   - Check if this session triggered any known friction patterns
+   - If yes: note "Known friction pattern triggered: [convention]. Was the convention followed? If not, consider stronger wording or more prominent placement."
+   - If a convention was followed and friction was avoided: note as positive signal
 
 If a recommendation would benefit from external validation, briefly verify with external sources before recommending. Skip external research for LIGHTWEIGHT sessions.
 

@@ -61,3 +61,23 @@ Show a summary dashboard:
 Facets data contains session summaries and goals but no file contents.
 No privacy tag filtering is needed. However, do not expose full `underlying_goal` text
 if it might contain sensitive project details — summarize instead.
+
+## Insight Routing
+
+After presenting analysis results, check if findings represent actionable conventions that should be preserved for future sessions.
+
+Examples of routable insights:
+- "Debugging tasks have 100% friction rate" → friction.md convention
+- "Docker/container tasks fail consistently" → friction.md convention
+- "Iterative refinement sessions spiral after 3 attempts" → friction.md convention
+
+Present proposed additions:
+
+> Insights suggest adding to friction.md:
+>   - "When debugging, verify hypothesis before fix attempts (2-strike limit)"
+>     <!-- @category: pattern -->
+> Route to friction.md? [y/n]
+
+On approval, write to `.claude/memory/friction.md`. If the file doesn't exist, create it with a `# Friction Patterns` header and `## Conventions` / `## Project-Specific` sections (same template as `/memory-init`).
+
+Cap total entries at ~15-20. If file exceeds cap after adding new entries, drop the least-recurrent entries (those without repeated evidence across multiple sessions).

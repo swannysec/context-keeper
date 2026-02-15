@@ -1,10 +1,11 @@
+---
+private: false
+---
 # ADR-NNN: [Title]
 <!-- @category: decision -->
 <!-- ConKeeper: category tags are invisible in rendered Markdown -->
 
-**Status:** Proposed | Accepted | Deprecated | Superseded by ADR-XXX
-**Date:** [YYYY-MM-DD]
-**Tags:** [tag1, tag2]
+**Status:** Accepted | **Date:** [YYYY-MM-DD] | **Tags:** [tag1, tag2]
 
 ## Context
 [Why this decision was needed - 1-2 sentences]
@@ -22,5 +23,9 @@
 
 ## Alternatives Considered
 - [Alt 1]: [Why rejected]
+
+## Superseded By
+<!-- If replaced, reference the newer ADR: ADR-NNN -->
+None
 
 <!-- To mark sensitive content private: wrap in <private>...</private> tags -->
