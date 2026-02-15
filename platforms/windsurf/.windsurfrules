@@ -218,11 +218,12 @@ Memory is stored in `.claude/memory/` with the following structure:
    - `--global` — include `~/.claude/memory/`
    - `--sessions` — include session files (last 30 days)
    - `--category <name>` — filter to entries with matching category tag
+   - `--cross-project` — search across configured project directories
 
 2. **Execute Search**
    Run the search script:
    ```bash
-   bash <conkeeper-path>/tools/memory-search.sh <query> [--global] [--sessions] [--category <name>]
+   bash <conkeeper-path>/tools/memory-search.sh <query> [--global] [--sessions] [--category <name>] [--cross-project]
    ```
 
 3. **Present Results**
@@ -241,6 +242,7 @@ Memory is stored in `.claude/memory/` with the following structure:
 /memory-search "token budget"
 /memory-search --global "naming convention"
 /memory-search --category decision "database"
+/memory-search --cross-project "authentication"
 ```
 
 ---

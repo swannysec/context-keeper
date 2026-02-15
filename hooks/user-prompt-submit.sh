@@ -86,64 +86,21 @@ correction_sensitivity=low
 
 config_had_explicit_window=false
 
+# Source shared config library
+SCRIPT_DIR_UPS="$(cd "$(dirname "$0")" && pwd)"
+. "$SCRIPT_DIR_UPS/lib-config.sh"
+
 # Try to read config from project's .memory-config.md
 config_file="${cwd:-.}/.claude/memory/.memory-config.md"
-if [[ -f "$config_file" ]]; then
-    # Extract YAML frontmatter between --- delimiters
-    frontmatter=""
-    in_frontmatter=false
-    delimiter_count=0
-    while IFS= read -r line; do
-        if [[ "$line" == "---" ]]; then
-            delimiter_count=$((delimiter_count + 1))
-            if (( delimiter_count == 1 )); then
-                in_frontmatter=true
-                continue
-            elif (( delimiter_count == 2 )); then
-                break
-            fi
-        fi
-        if [[ "$in_frontmatter" == true ]]; then
-            # Strip inline comments
-            line="${line%%#*}"
-            frontmatter+="$line"$'\n'
-        fi
-    done < "$config_file"
-
-    if [[ -n "$frontmatter" ]]; then
-        # Parse simple YAML key: value pairs
-        parse_yaml_int() {
-            local key="$1"
-            local default="$2"
-            local val
-            val=$(printf '%s' "$frontmatter" | awk -F': *' -v k="$key" '$1 == k { gsub(/[^0-9]/, "", $2); print $2 }')
-            if [[ -n "$val" ]] && [[ "$val" =~ ^[0-9]+$ ]]; then
-                printf '%s' "$val"
-            else
-                printf '%s' "$default"
-            fi
-        }
-        auto_sync_threshold=$(parse_yaml_int "auto_sync_threshold" "$auto_sync_threshold")
-        hard_block_threshold=$(parse_yaml_int "hard_block_threshold" "$hard_block_threshold")
-        parsed_window=$(parse_yaml_int "context_window_tokens" "")
-        if [[ -n "$parsed_window" ]]; then
-            context_window_tokens=$parsed_window
-            config_had_explicit_window=true
-        fi
-        # Parse string YAML values (for correction_sensitivity)
-        parse_yaml_str() {
-            local key="$1"
-            local default="$2"
-            local val
-            val=$(printf '%s' "$frontmatter" | awk -F': *' -v k="$key" '$1 == k { gsub(/^[ \t]+|[ \t]+$/, "", $2); print $2 }')
-            if [[ -n "$val" ]]; then
-                printf '%s' "$val"
-            else
-                printf '%s' "$default"
-            fi
-        }
-        correction_sensitivity=$(parse_yaml_str "correction_sensitivity" "low")
+if extract_frontmatter "$config_file"; then
+    auto_sync_threshold=$(parse_yaml_int "auto_sync_threshold" "$auto_sync_threshold")
+    hard_block_threshold=$(parse_yaml_int "hard_block_threshold" "$hard_block_threshold")
+    parsed_window=$(parse_yaml_int "context_window_tokens" "")
+    if [[ -n "$parsed_window" ]]; then
+        context_window_tokens=$parsed_window
+        config_had_explicit_window=true
     fi
+    correction_sensitivity=$(parse_yaml_str "correction_sensitivity" "low")
 fi
 
 # --- Auto-detect context window from model ---

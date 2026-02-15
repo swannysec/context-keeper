@@ -9,6 +9,7 @@ Search across memory files for keywords, patterns, or past decisions. Returns st
 /memory-search --global <query>
 /memory-search --sessions <query>
 /memory-search --category <name> <query>
+/memory-search --cross-project <query>
 ```
 
 Flags can appear in any order relative to the query.
@@ -20,6 +21,7 @@ Flags can appear in any order relative to the query.
    - `--global` — include global memory (`~/.claude/memory/`)
    - `--sessions` — include session history files (last 30 days)
    - `--category <name>` — filter results to entries with matching category tag
+   - `--cross-project` — search across other projects (requires config)
 
 2. **Run the Search Script**
    ```bash
@@ -49,4 +51,5 @@ Flags can appear in any order relative to the query.
 /memory-search --sessions "authentication bug"
 /memory-search --category decision "database"
 /memory-search --category pattern --global "error handling"
+/memory-search --cross-project "authentication"
 ```

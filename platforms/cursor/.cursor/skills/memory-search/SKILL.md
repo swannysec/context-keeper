@@ -16,6 +16,8 @@ Parse the user's invocation to extract the query and any flags:
 /memory-search --global <query>
 /memory-search --sessions <query>
 /memory-search --category <name> <query>
+/memory-search --cross-project <query>
+/memory-search --cross-project --category <name> <query>
 ```
 
 Flags can appear in any order relative to the query.
@@ -55,4 +57,6 @@ If the script returns "No results found", suggest broadening the search:
 /memory-search --sessions "authentication bug"
 /memory-search --category decision "database"
 /memory-search --category pattern --global "error handling"
+/memory-search --cross-project "authentication"
+/memory-search --cross-project --category decision "database"
 ```

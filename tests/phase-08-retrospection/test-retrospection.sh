@@ -62,6 +62,10 @@ test_stop_hook_silent_no_data() {
   local workdir="$TMPDIR_TEST/test2"
   mkdir -p "$workdir/.claude/memory/sessions"
 
+  # Clean any health cache from other test runs (stop.sh v1.2.0 reads this)
+  local flag_dir="${TMPDIR:-/tmp}/conkeeper"
+  rm -f "$flag_dir/health-$(date +%Y%m%d)" 2>/dev/null || true
+
   # Empty corrections queue (only header, <= 3 lines)
   cat > "$workdir/.claude/memory/corrections-queue.md" <<'EOF'
 # Corrections Queue
