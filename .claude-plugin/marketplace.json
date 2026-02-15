@@ -6,14 +6,14 @@
   },
   "metadata": {
     "description": "Claude Code plugins by swannysec",
-    "version": "1.0.0"
+    "version": "1.2.0"
   },
   "plugins": [
     {
       "name": "context-keeper",
       "source": "./",
       "description": "File-based agent memory system for persistent context across sessions. Provides structured context management using plain Markdown files for global and project-specific memory.",
-      "version": "0.4.1",
+      "version": "1.2.0",
       "author": {
         "name": "swannysec"
       },
