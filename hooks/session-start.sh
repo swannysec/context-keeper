@@ -11,8 +11,9 @@ trap 'echo "session-start.sh failed at line $LINENO" >&2' ERR
 # 4. Health scoring (Phase B) — always-on, not budget-gated
 # 5. Memory diff (Phase A) — gated by token budget (economy=skip)
 # 6. Friction loading (Phase E) — gated by token budget (economy=skip)
-# 7. Context building + decision index directive (Phase C)
-# 8. JSON output
+# 7. Handoff resume detection — NOT budget-gated (continuation state priority)
+# 8. Context building + decision index directive (Phase C)
+# 9. JSON output
 
 # Sanitize content for safe embedding in <conkeeper-*> XML blocks.
 # Prevents tag injection by escaping closing tags that could break out of the wrapper.
@@ -288,6 +289,68 @@ ${friction_content}
 </conkeeper-friction>"
         fi
     fi
+fi
+
+# --- Handoff Resume Detection ---
+# NOT gated by token budget — continuation state always takes priority.
+handoff_dir="${PWD}/.claude/memory/.handoffs"
+if [ -d "$handoff_dir" ]; then
+    # Find most recent valid pending handoff
+    latest_handoff=""
+    latest_epoch=0
+    handoff_count=0
+    for hf in "$handoff_dir"/.pending-handoff-*.md; do
+        handoff_count=$((handoff_count + 1))
+        [ "$handoff_count" -gt 10 ] && break
+        [ -f "$hf" ] || continue
+        [ -L "$hf" ] && continue  # Skip symlinks
+        # Parse handoff frontmatter using shared config library
+        if ! extract_frontmatter "$hf"; then continue; fi
+        hf_epoch=$(parse_yaml_int "generated" "")
+        [ -z "$hf_epoch" ] && continue
+        hf_ttl=$(parse_yaml_int "ttl" "3600")
+        now=$(date +%s)
+        # Reject future-epoch handoffs (prevents crafted files from bypassing TTL)
+        if [ "$hf_epoch" -gt "$now" ]; then
+            rm -f "$hf"
+            echo "[ConKeeper] Removed future-dated handoff: $(basename "$hf")" >&2
+            continue
+        fi
+        age=$((now - hf_epoch))
+        if [ "$age" -gt "$hf_ttl" ]; then
+            rm -f "$hf"  # Stale, clean up
+            echo "[ConKeeper] Removed stale handoff: $(basename "$hf")" >&2
+            continue
+        fi
+        if [ "$hf_epoch" -gt "$latest_epoch" ]; then
+            latest_epoch="$hf_epoch"
+            latest_handoff="$hf"
+        fi
+    done
+
+    if [ -n "$latest_handoff" ]; then
+        # Strip YAML frontmatter (machine metadata) before injection
+        handoff_content=$(awk 'BEGIN{skip=0} /^---$/{skip++; next} skip>=2{print}' "$latest_handoff" | head -c 2000)
+        handoff_content=$(sanitize_context_content "$handoff_content")
+        additional_context="${additional_context}
+<conkeeper-handoff>
+[ConKeeper] Resuming from auto-handoff. Previous session context restored.
+REQUIRED: Read active-context.md and progress.md before taking any action.
+Review git status for uncommitted changes. Then continue with the task described below.
+
+${handoff_content}
+</conkeeper-handoff>"
+        # Rename to prevent re-injection
+        mv "$latest_handoff" "${latest_handoff/.pending-handoff-/.last-handoff-}" 2>/dev/null || true
+    fi
+
+    # Clean up old .last-handoff-* files (>24h)
+    for old in "$handoff_dir"/.last-handoff-*.md; do
+        [ -f "$old" ] || continue
+        old_epoch=$(stat -f %m "$old" 2>/dev/null) || continue
+        now=$(date +%s)
+        [ $((now - old_epoch)) -gt 86400 ] && rm -f "$old"
+    done
 fi
 
 # Build context message

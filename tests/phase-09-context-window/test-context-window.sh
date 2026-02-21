@@ -99,9 +99,9 @@ get_context_window() {
   #   First run sets sync flag and outputs JSON
 
   # Detect by output behavior:
-  # - JSON output with hookSpecificOutput → triggered auto-sync (window caused >= 60%)
-  # - No output → below threshold (window is large enough that 500K tokens < 60%)
-  if echo "$output" | jq -e '.hookSpecificOutput' &>/dev/null 2>&1; then
+  # - Output contains conkeeper-auto-sync → triggered auto-sync (window caused >= 60%)
+  # - No auto-sync in output → below sync threshold (may still have bracket directives)
+  if echo "$output" | grep -q "conkeeper-auto-sync"; then
     echo "triggered"
   else
     echo "below_threshold"
