@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Functional Integration Tests — v1.2.0 Session Intelligence
+# Functional Integration Tests — v1.3.0 (includes v1.2.0 + lifecycle automation)
 # Tests realistic multi-step flows across features.
 # Run: bash tests/functional/test-integration.sh
 
@@ -588,9 +588,98 @@ CONF
 }
 
 # ---------------------------------------------------------------------------
+# Flow 9: Lifecycle — handoff generated → new session detects and injects
+# ---------------------------------------------------------------------------
+test_flow_handoff_lifecycle() {
+  echo ""
+  echo "--- Flow 9: Handoff Lifecycle ---"
+  local base="$TMPDIR_TEST/flow9"
+  setup_full_project "$base"
+
+  # Add auto_clear config
+  cat > "$base/.claude/memory/.memory-config.md" <<'CONF'
+---
+token_budget: standard
+staleness_commits: 5
+auto_clear: true
+auto_clear_pct: 90
+context_window_tokens: 200000
+---
+CONF
+  cd "$base"
+  git add -A && git commit -q -m "feat: add auto-clear config"
+
+  # === Simulate session at 92% with sync already done ===
+  local transcript="$base/transcript.jsonl"
+  printf '{"type":"assistant","message":{"usage":{"input_tokens":184000,"cache_read_input_tokens":0,"cache_creation_input_tokens":0}}}\n' > "$transcript"
+
+  local flag_dir="${TMPDIR:-/tmp}/conkeeper"
+  mkdir -p "$flag_dir"
+  rm -f "$flag_dir/synced-sess-flow9" "$flag_dir/blocked-sess-flow9" "$flag_dir/handoff-sess-flow9"
+  printf '%s' "$(date +%s)" > "$flag_dir/synced-sess-flow9"
+
+  local json
+  json=$(jq -n \
+    --arg sid "sess-flow9" \
+    --arg tp "$transcript" \
+    --arg cwd "$base" \
+    --arg um "continue working" \
+    '{session_id: $sid, transcript_path: $tp, cwd: $cwd, user_message: $um}')
+
+  local ups_output
+  ups_output=$(printf '%s' "$json" | bash "$REPO_ROOT/hooks/user-prompt-submit.sh" 2>/dev/null) || true
+
+  # 9a: Handoff file generated
+  if [ -f "$base/.claude/memory/.handoffs/.pending-handoff-sess-flow9.md" ]; then
+    pass "Flow 9a: Handoff file generated at 92%"
+  else
+    fail "Flow 9a: Handoff file not generated"
+    cd "$ORIG_DIR"
+    return
+  fi
+
+  # 9b: Auto-clear advisory in output
+  if printf '%s' "$ups_output" | grep -q "conkeeper-auto-clear"; then
+    pass "Flow 9b: Auto-clear advisory emitted"
+  else
+    fail "Flow 9b: Auto-clear advisory missing"
+  fi
+
+  # === Simulate /clear → new session ===
+  local output2
+  output2=$(bash "$REPO_ROOT/hooks/session-start.sh" 2>/dev/null)
+
+  # 9c: Handoff injected in new session
+  if printf '%s' "$output2" | grep -q "conkeeper-handoff"; then
+    pass "Flow 9c: New session detects and injects handoff"
+  else
+    fail "Flow 9c: Handoff not detected in new session"
+  fi
+
+  # 9d: Pending handoff renamed to last
+  if [ ! -f "$base/.claude/memory/.handoffs/.pending-handoff-sess-flow9.md" ] && \
+     [ -f "$base/.claude/memory/.handoffs/.last-handoff-sess-flow9.md" ]; then
+    pass "Flow 9d: Handoff renamed from .pending- to .last-"
+  else
+    fail "Flow 9d: Handoff not properly renamed"
+    ls -la "$base/.claude/memory/.handoffs/" 2>/dev/null || true
+  fi
+
+  # 9e: Output is valid JSON
+  if printf '%s' "$output2" | jq . > /dev/null 2>&1; then
+    pass "Flow 9e: New session output is valid JSON"
+  else
+    fail "Flow 9e: New session output is NOT valid JSON"
+  fi
+
+  cd "$ORIG_DIR"
+  rm -f "$flag_dir/synced-sess-flow9" "$flag_dir/blocked-sess-flow9" "$flag_dir/handoff-sess-flow9"
+}
+
+# ---------------------------------------------------------------------------
 # Run all flows
 # ---------------------------------------------------------------------------
-echo "=== Functional Integration Tests — v1.2.0 ==="
+echo "=== Functional Integration Tests — v1.3.0 ==="
 
 test_flow_first_session
 test_flow_resume_with_changes
@@ -600,6 +689,7 @@ test_flow_cross_project_search
 test_flow_full_lifecycle
 test_flow_security_sanitization
 test_flow_config_consistency
+test_flow_handoff_lifecycle
 
 echo ""
 echo "=== Results: $PASS passed, $FAIL failed ==="

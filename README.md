@@ -19,6 +19,8 @@ ConKeeper replaces database-backed context management with simple, version-contr
 - **Correction detection** - Real-time detection of user corrections and friction signals
 - **Session retrospection** - After Action Review workflow via `/memory-reflect`
 - **Facets integration** - Claude Code session analytics for friction and satisfaction trends
+- **Context brackets** - Graduated behavioral directives as context window fills
+- **Lifecycle automation** - Auto-handoff generation and seamless session resume
 
 ## Installation
 
@@ -179,6 +181,37 @@ ConKeeper automatically preserves your memory before context window compaction. 
 | >= 80% | Hard block — requires manual `/memory-sync` before continuing |
 | >= 90% | Claude's auto-compaction fires; PreCompact hook warns if unsaved |
 
+### Context Brackets
+
+In addition to the sync/block actions above, context brackets inject graduated behavioral directives as the context window fills. They guide the agent to adapt its behavior — reducing output, checkpointing progress, and avoiding risky multi-step work — before quality degradation occurs.
+
+| Bracket | Default Range | Behavior |
+|---------|--------------|----------|
+| FRESH | 0–39% | No injection |
+| MODERATE | 40–59% | Re-read requirements before architectural decisions; consider sub-agents for 3+ step tasks |
+| DEPLETED | 60–79% | Checkpoint progress before multi-step work; limit output; warn on complex new tasks |
+| CRITICAL | 80%+ | No new multi-step work; no corner-cutting; checkpoint frequently; minimize output |
+
+Brackets fire on every prompt (even after sync/block flags are set), ensuring the agent always receives behavioral guidance at high context usage.
+
+To disable: set `context_brackets: false` in `.memory-config.md`.
+
+### Auto-Clear (Lifecycle Automation)
+
+When enabled, auto-clear generates a handoff file at high context usage and advises the user to run `/clear`. On the next session start, the handoff is automatically detected and injected, providing seamless continuity.
+
+**This is advisory-only.** ConKeeper cannot run `/clear` programmatically — it tells the user to type it manually.
+
+**Safe-use guidelines:**
+1. Enable only after testing with your workflow — it changes session end behavior
+2. Ensure `auto_clear_pct` exceeds `auto_sync_threshold` (validated automatically)
+3. Handoff files expire after `handoff_ttl` seconds (default: 1 hour)
+4. Only one handoff per session (flag-file prevents duplicates)
+5. Handoff requires sync to complete first — won't fire if sync hasn't run
+6. Disabled by default — opt-in via `auto_clear: true`
+
+The handoff file format (`.claude/memory/.handoffs/`) is designed as an extension point for future wrapper scripts or API changes.
+
 ### Recommended Setup
 
 For the full escalation sequence, add to your shell profile (`.zshrc`, `.bashrc`, etc.):
@@ -199,6 +232,7 @@ suggest_memories: true        # Whether to suggest memory additions (default: tr
 auto_load: true               # Auto-load memory at session start (default: true)
 output_style: normal          # quiet | normal | explanatory (default: normal)
 token_budget: standard        # economy | light | standard | detailed (default: standard)
+staleness_commits: 5          # Commits before memory file is considered stale (default: 5)
 auto_sync_threshold: 60       # When to auto-sync (default: 60)
 hard_block_threshold: 80      # When to block until manual sync (default: 80)
 # context_window_tokens: 200000 # Override auto-detection (auto-detects from model)
@@ -206,6 +240,13 @@ observation_hook: true        # Enable/disable PostToolUse observation logging (
 observation_detail: full      # full | stubs_only | off (default: full)
 correction_sensitivity: low   # low | medium — correction detection sensitivity (default: low)
 auto_reflect: true            # Auto-trigger /memory-reflect after /memory-sync (default: true)
+context_brackets: true        # Enable/disable context brackets (default: true)
+bracket_fresh: 40             # Upper bound of FRESH bracket (default: 40)
+bracket_moderate: 60          # Upper bound of MODERATE bracket (default: 60)
+bracket_depleted: 80          # Upper bound of DEPLETED bracket (default: 80)
+auto_clear: false             # Enable lifecycle automation (default: false)
+auto_clear_pct: 90            # Threshold for handoff generation (default: 90)
+handoff_ttl: 3600             # Handoff expiry in seconds (default: 3600)
 ---
 ```
 

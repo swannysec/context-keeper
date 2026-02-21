@@ -5,6 +5,48 @@ All notable changes to ConKeeper will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] — 2026-02-21
+
+### Added
+- **Context brackets** — graduated behavioral directives injected based on context window usage
+  - Four tiers: FRESH (no injection), MODERATE, DEPLETED, CRITICAL
+  - Fires unconditionally on every prompt — even after sync/block flags are set
+  - Configurable thresholds (`bracket_fresh`, `bracket_moderate`, `bracket_depleted`)
+  - Disable with `context_brackets: false`
+- **Lifecycle automation (auto-clear)** — handoff generation and resume detection
+  - Generates handoff file at configurable threshold (default: 90%) after sync completes
+  - Advisory-only `/clear` recommendation (hooks cannot trigger CLI commands)
+  - Resume detection in session-start: auto-injects handoff content on next session
+  - Session-scoped filenames prevent parallel session collisions
+  - Handoff TTL with automatic stale cleanup (default: 1 hour)
+  - Disabled by default — opt-in via `auto_clear: true`
+- New configuration options: `context_brackets`, `bracket_fresh`, `bracket_moderate`, `bracket_depleted`, `auto_clear`, `auto_clear_pct`, `handoff_ttl`
+
+### Changed
+- **Refactored `user-prompt-submit.sh` output architecture** — replaced early-exit pattern with accumulate-then-emit, enabling co-emission of brackets alongside sync/block directives
+- Config validation: `auto_clear_pct` auto-adjusted if <= `auto_sync_threshold`
+- Phase-09 context window tests updated to check for `conkeeper-auto-sync` specifically (accommodates bracket output)
+
+### Notes
+- 195 tests pass (129 unit + 12 bracket + 18 lifecycle + 36 functional integration)
+- `lib-handoff.sh` sourced conditionally to keep the hot path lean
+- Handoff files stored in `.claude/memory/.handoffs/` (isolated from memory files)
+- All git operations in handoff use 2-second bash-native timeout (no GNU `timeout`)
+
+## [1.2.0] — 2026-02-14
+
+### Added
+- **Session intelligence features** — memory diff, health scoring, decision index, cross-project search, friction-aware loading
+  - Shared config library (`hooks/lib-config.sh`) for consistent YAML parsing
+  - Memory diff shows commits and file changes since last sync
+  - Health scoring detects stale memory files
+  - Decision index directive for ADR lookup
+  - Cross-project search with privacy enforcement
+  - Friction-aware session start with budget gating
+
+### Changed
+- Version bumped from 1.1.0 to 1.2.0
+
 ## [1.1.0] — 2026-02-10
 
 ### Added

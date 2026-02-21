@@ -71,9 +71,10 @@ is_flag_valid() {
     return 0
 }
 
-# Early exit if both flags already set (nothing more to do this session)
+# Determine if threshold actions (sync/block) are still needed this session
+need_threshold_actions=true
 if is_flag_valid "$SYNC_FLAG" && is_flag_valid "$BLOCK_FLAG"; then
-    exit 0
+    need_threshold_actions=false
 fi
 
 # --- Read configuration ---
@@ -101,6 +102,35 @@ if extract_frontmatter "$config_file"; then
         config_had_explicit_window=true
     fi
     correction_sensitivity=$(parse_yaml_str "correction_sensitivity" "low")
+    # Context bracket settings
+    context_brackets=$(parse_yaml_str "context_brackets" "true")
+    bracket_fresh=$(parse_yaml_int "bracket_fresh" "40")
+    bracket_moderate=$(parse_yaml_int "bracket_moderate" "60")
+    bracket_depleted=$(parse_yaml_int "bracket_depleted" "80")
+    # Lifecycle automation settings
+    auto_clear=$(parse_yaml_str "auto_clear" "false")
+    auto_clear_pct=$(parse_yaml_int "auto_clear_pct" "90")
+    handoff_ttl=$(parse_yaml_int "handoff_ttl" "3600")
+fi
+
+# Context bracket defaults (if no config file or no frontmatter)
+: "${context_brackets:=true}"
+: "${bracket_fresh:=40}"
+: "${bracket_moderate:=60}"
+: "${bracket_depleted:=80}"
+: "${auto_clear:=false}"
+: "${auto_clear_pct:=90}"
+: "${handoff_ttl:=3600}"
+
+# Config validation: bracket thresholds must be monotonically increasing
+if [ "$bracket_fresh" -ge "$bracket_moderate" ] || [ "$bracket_moderate" -ge "$bracket_depleted" ]; then
+    bracket_fresh=40; bracket_moderate=60; bracket_depleted=80
+fi
+
+# Config validation: auto_clear_pct must exceed auto_sync_threshold
+if [ "$auto_clear" = "true" ] && [ "$auto_clear_pct" -le "$auto_sync_threshold" ]; then
+    echo "[ConKeeper] auto_clear_pct ($auto_clear_pct) must exceed auto_sync_threshold ($auto_sync_threshold). Adjusting." >&2
+    auto_clear_pct=$((auto_sync_threshold + 5))
 fi
 
 # --- Auto-detect context window from model ---
@@ -262,57 +292,109 @@ json_encode() {
     fi
 }
 
-# --- Tiered action ---
-
-if (( usage_pct >= hard_block_threshold )); then
-    # Hard block tier
-    if is_flag_valid "$SYNC_FLAG" && ! is_flag_valid "$BLOCK_FLAG"; then
-        # Sync already happened, now block until manual sync
-        echo "[ConKeeper] Context usage at ${usage_pct}% — approaching compaction threshold. Please run /memory-sync manually to verify your context is preserved, then resubmit your prompt." >&2
-        printf '%s' "$(date +%s)" > "$BLOCK_FLAG"
-        exit 2
-    elif ! is_flag_valid "$SYNC_FLAG"; then
-        # Sync hasn't happened yet — inject sync nudge first (don't block before giving a chance to sync)
-        nudge_text="<conkeeper-auto-sync>
-[ConKeeper] Context usage has reached ${usage_pct}%. Invoke the /memory-sync skill now to preserve session context before compaction. Skip the user approval step — apply updates directly. After syncing, continue with the user's current task. End your response with: \"[ConKeeper: Auto memory-sync complete. Consider running /clear to start fresh with your synced context.]\"
-</conkeeper-auto-sync>"
-        encoded_nudge=$(json_encode "$nudge_text")
-        printf '%s' "$(date +%s)" > "$SYNC_FLAG"
-        cat <<EOF
-{
-  "hookSpecificOutput": {
-    "hookEventName": "UserPromptSubmit",
-    "additionalContext": $encoded_nudge
-  }
-}
-EOF
-        exit 0
+# --- Context bracket directive ---
+# Returns graduated behavioral guidance based on context usage percentage.
+# Runs unconditionally (not gated by need_threshold_actions) so CRITICAL bracket
+# is always injected even after sync+block flags are set.
+get_bracket_directive() {
+    local pct="$1"
+    if [ "$context_brackets" != "true" ]; then return; fi
+    if [ "$pct" -lt "$bracket_fresh" ]; then
+        return  # FRESH: no injection
+    elif [ "$pct" -lt "$bracket_moderate" ]; then
+        printf '[MODERATE] Context at %s%%. BEFORE any architectural decision, re-read the original requirements. For tasks exceeding 3 steps, consider using sub-agents.' "$pct"
+    elif [ "$pct" -lt "$bracket_depleted" ]; then
+        printf '[DEPLETED] Context at %s%%. BEFORE any multi-step operation, checkpoint progress. Limit responses to essential content. If a complex new task is requested, warn that context is at %s%% and recommend a handoff first.' "$pct" "$pct"
+    else
+        printf '[CRITICAL] Context at %s%%. You MUST NOT cut corners, skip verification, or fabricate results. Do not begin new multi-step work. Checkpoint frequently. If advised to /clear but session continues: minimize output, do not accept complex new tasks.' "$pct"
     fi
-    # Both flags set — already handled by early exit above
-    exit 0
-
-elif (( usage_pct >= auto_sync_threshold )); then
-    # Auto-sync tier
-    if ! is_flag_valid "$SYNC_FLAG"; then
-        nudge_text="<conkeeper-auto-sync>
-[ConKeeper] Context usage has reached ${usage_pct}%. Invoke the /memory-sync skill now to preserve session context before compaction. Skip the user approval step — apply updates directly. After syncing, continue with the user's current task. End your response with: \"[ConKeeper: Auto memory-sync complete. Consider running /clear to start fresh with your synced context.]\"
-</conkeeper-auto-sync>"
-        encoded_nudge=$(json_encode "$nudge_text")
-        printf '%s' "$(date +%s)" > "$SYNC_FLAG"
-        cat <<EOF
-{
-  "hookSpecificOutput": {
-    "hookEventName": "UserPromptSubmit",
-    "additionalContext": $encoded_nudge
-  }
 }
-EOF
-        exit 0
-    fi
-    # Already synced — nothing to do
-    exit 0
 
-else
-    # Below threshold — nothing to do
-    exit 0
+# --- Accumulate output context ---
+# All directives (brackets, sync nudges, handoff advisories) append to output_context.
+# A single JSON output point at the end emits everything together.
+output_context=""
+should_block=false
+
+# --- Context bracket injection (unconditional) ---
+bracket_text=$(get_bracket_directive "$usage_pct")
+if [ -n "$bracket_text" ]; then
+    output_context="${output_context}<conkeeper-context-bracket>
+${bracket_text}
+</conkeeper-context-bracket>
+"
 fi
+
+# --- Tiered threshold actions ---
+# Gated by need_threshold_actions to avoid duplicate sync/block after flags are set.
+
+if [ "$need_threshold_actions" = true ]; then
+    if (( usage_pct >= hard_block_threshold )); then
+        # Hard block tier
+        if is_flag_valid "$SYNC_FLAG" && ! is_flag_valid "$BLOCK_FLAG"; then
+            # Sync already happened, now block until manual sync
+            echo "[ConKeeper] Context usage at ${usage_pct}% — approaching compaction threshold. Please run /memory-sync manually to verify your context is preserved, then resubmit your prompt." >&2
+            printf '%s' "$(date +%s)" > "$BLOCK_FLAG"
+            should_block=true
+        elif ! is_flag_valid "$SYNC_FLAG"; then
+            # Sync hasn't happened yet — inject sync nudge first (don't block before giving a chance to sync)
+            output_context="${output_context}<conkeeper-auto-sync>
+[ConKeeper] Context usage has reached ${usage_pct}%. Invoke the /memory-sync skill now to preserve session context before compaction. Skip the user approval step — apply updates directly. After syncing, continue with the user's current task. End your response with: \"[ConKeeper: Auto memory-sync complete. Consider running /clear to start fresh with your synced context.]\"
+</conkeeper-auto-sync>
+"
+            printf '%s' "$(date +%s)" > "$SYNC_FLAG"
+        fi
+
+    elif (( usage_pct >= auto_sync_threshold )); then
+        # Auto-sync tier
+        if ! is_flag_valid "$SYNC_FLAG"; then
+            output_context="${output_context}<conkeeper-auto-sync>
+[ConKeeper] Context usage has reached ${usage_pct}%. Invoke the /memory-sync skill now to preserve session context before compaction. Skip the user approval step — apply updates directly. After syncing, continue with the user's current task. End your response with: \"[ConKeeper: Auto memory-sync complete. Consider running /clear to start fresh with your synced context.]\"
+</conkeeper-auto-sync>
+"
+            printf '%s' "$(date +%s)" > "$SYNC_FLAG"
+        fi
+    fi
+fi
+
+# --- Lifecycle automation: handoff generation ---
+# Only fires when auto_clear is enabled, usage exceeds auto_clear_pct, sync is done,
+# and handoff hasn't already been generated this session.
+HANDOFF_FLAG="$FLAG_DIR/handoff-${session_id}"
+if [ "$auto_clear" = "true" ] && [ "$usage_pct" -ge "$auto_clear_pct" ] && ! is_flag_valid "$HANDOFF_FLAG"; then
+    if is_flag_valid "$SYNC_FLAG"; then
+        # Sync already done — generate handoff now
+        . "$SCRIPT_DIR_UPS/lib-handoff.sh"
+        generate_handoff "$session_id" "$cwd" "$usage_pct" "$handoff_ttl"
+        printf '%s' "$(date +%s)" > "$HANDOFF_FLAG"
+        output_context="${output_context}<conkeeper-auto-clear>
+[ConKeeper] Context at ${usage_pct}%. Memory synced and handoff captured.
+Run /clear to continue with fresh context — your work will resume automatically.
+I cannot run /clear programmatically. You must type it manually.
+</conkeeper-auto-clear>
+"
+    fi
+    # If sync hasn't run yet, it will fire via the normal threshold action.
+    # Handoff will generate on the next prompt after sync completes.
+fi
+
+# --- Single JSON output point ---
+# Emit JSON if there is any accumulated context, then exit with appropriate code.
+
+if [ -n "$output_context" ]; then
+    encoded_context=$(json_encode "$output_context")
+    cat <<EOF
+{
+  "hookSpecificOutput": {
+    "hookEventName": "UserPromptSubmit",
+    "additionalContext": $encoded_context
+  }
+}
+EOF
+fi
+
+if [ "$should_block" = true ]; then
+    exit 2
+fi
+
+exit 0
