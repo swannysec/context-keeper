@@ -1,6 +1,8 @@
 ---
 name: memory-insights
 description: Analyze session friction trends, success rates, and satisfaction patterns across sessions using Claude Code facets data. Read-only query tool for on-demand trend analysis.
+triggers:
+  - /memory-insights
 ---
 
 # Memory Insights — Session Trend Analysis

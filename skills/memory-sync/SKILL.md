@@ -1,6 +1,8 @@
 ---
 name: memory-sync
 description: Synchronize current session state to memory files. Reviews conversation, updates relevant files, and confirms changes. Use at end of sessions or when significant progress has been made.
+triggers:
+  - /memory-sync
 ---
 
 # Memory Sync

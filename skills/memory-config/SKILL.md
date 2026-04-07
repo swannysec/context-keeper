@@ -1,6 +1,8 @@
 ---
 name: memory-config
 description: View and modify ConKeeper memory configuration settings. Use to adjust token budget, output style, and other preferences after memory initialization.
+triggers:
+  - /memory-config
 ---
 
 # Memory Configuration

@@ -133,16 +133,30 @@ if [ "$auto_clear" = "true" ] && [ "$auto_clear_pct" -le "$auto_sync_threshold" 
     auto_clear_pct=$((auto_sync_threshold + 5))
 fi
 
-# --- Auto-detect context window from model ---
+# --- Auto-detect context window from settings ---
+# Priority: 1) .memory-config.md explicit override (already handled above)
+#           2) Model window from settings.json, capped by CLAUDE_CODE_AUTO_COMPACT_WINDOW
+#           3) Default 200K (already set)
 
 settings_file="$HOME/.claude/settings.json"
 if [[ "$config_had_explicit_window" != "true" ]] && [[ -f "$settings_file" ]] && [[ ! -L "$settings_file" ]]; then
+    # Resolve model-based context window
     model_value=$(jq -r '.model // empty' "$settings_file" 2>/dev/null) || model_value=""
     if [[ -n "$model_value" ]]; then
         case "$model_value" in
-            *\[1m\]*) context_window_tokens=1000000 ;;
-            # Default 200K for all other variants — already set
+            claude-opus-4-*|claude-sonnet-4-*) context_window_tokens=1000000 ;;
+            claude-haiku-*) context_window_tokens=200000 ;;
+            # Unknown models keep the 200K default
         esac
+    fi
+
+    # Apply compaction window cap: if CLAUDE_CODE_AUTO_COMPACT_WINDOW is set
+    # and lower than the model window, use it (it's the actual compaction trigger)
+    compact_window=$(jq -r '.env.CLAUDE_CODE_AUTO_COMPACT_WINDOW // empty' "$settings_file" 2>/dev/null) || compact_window=""
+    if [[ -n "$compact_window" ]] && [[ "$compact_window" =~ ^[0-9]+$ ]]; then
+        if [[ "$compact_window" -lt "$context_window_tokens" ]]; then
+            context_window_tokens=$compact_window
+        fi
     fi
 fi
 

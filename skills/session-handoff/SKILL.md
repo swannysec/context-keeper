@@ -1,6 +1,8 @@
 ---
 name: session-handoff
 description: Capture current session state and generate a handoff prompt for seamless continuation in a new session. Use when context window is filling up, before ending a long session, or when explicitly requested.
+triggers:
+  - /session-handoff
 ---
 
 # Session Handoff
