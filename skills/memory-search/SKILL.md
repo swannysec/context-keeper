@@ -1,6 +1,8 @@
 ---
 name: memory-search
 description: Search memory files for keywords, patterns, or categories. Returns structured results grouped by file with context.
+triggers:
+  - /memory-search
 ---
 
 # Memory Search

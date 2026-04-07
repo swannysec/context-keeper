@@ -1,6 +1,8 @@
 ---
 name: memory-init
 description: Initialize the file-based memory system for the current project. Creates the directory structure and starter files. Use when starting organized work on a new project.
+triggers:
+  - /memory-init
 ---
 
 # Memory Initialization

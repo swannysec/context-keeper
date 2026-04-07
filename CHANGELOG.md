@@ -5,6 +5,13 @@ All notable changes to ConKeeper will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] — 2026-04-07
+
+### Fixed
+- **Dynamic context window detection** — replaced broken `*[1m]*` model pattern with real model ID matching (`claude-opus-4-*`, `claude-sonnet-4-*` → 1M; `claude-haiku-*` → 200K)
+- **Compaction window cap** — reads `CLAUDE_CODE_AUTO_COMPACT_WINDOW` from `settings.json` env and applies `min(model_window, compact_window)` so thresholds align with the actual compaction trigger point
+- Auto-sync and hard-block tiers no longer fire too early when effective window exceeds 200K
+
 ## [1.3.0] — 2026-02-21
 
 ### Added

@@ -1,6 +1,8 @@
 ---
 name: memory-reflect
 description: Session retrospection using After Action Review methodology. Analyzes corrections, observations, and session activity to produce improvement recommendations. Use at end of sessions or after /memory-sync.
+triggers:
+  - /memory-reflect
 ---
 
 # Memory Reflect — Session Retrospection
