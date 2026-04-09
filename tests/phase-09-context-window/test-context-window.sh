@@ -127,9 +127,9 @@ test_default_no_settings_no_config() {
 }
 
 # ---------------------------------------------------------------------------
-# Test 2: Model auto-detect opus 4.x → 1000000
+# Test 2: Model auto-detect claude-opus-4-6 (standard) → 200000
 # ---------------------------------------------------------------------------
-test_auto_detect_opus_1m() {
+test_auto_detect_opus_200k() {
   local workdir="$TMPDIR_TEST/test2"
   local fake_home="$TMPDIR_TEST/home2"
   setup_project "$workdir"
@@ -138,19 +138,19 @@ test_auto_detect_opus_1m() {
   local result
   result=$(get_context_window "$workdir" "$fake_home" "sess-09-02")
 
-  # With 1M window: 500000/1000000 = 50% → below 60% threshold
-  if [[ "$result" == "below_threshold" ]]; then
-    pass "Test 2: Auto-detect claude-opus-4-6 — 1M window, 50% below threshold"
+  # With 200K window: 500000/200000 = 250% → should trigger
+  if [[ "$result" == "triggered" ]]; then
+    pass "Test 2: Auto-detect claude-opus-4-6 — 200K window triggers at 250%"
   else
-    fail "Test 2: Auto-detect claude-opus-4-6 — expected below_threshold (50%)"
+    fail "Test 2: Auto-detect claude-opus-4-6 — expected trigger at 250%"
     echo "  Result: $result"
   fi
 }
 
 # ---------------------------------------------------------------------------
-# Test 3: Model auto-detect sonnet 4.x → 1000000
+# Test 3: Model auto-detect claude-sonnet-4-6 (standard) → 200000
 # ---------------------------------------------------------------------------
-test_auto_detect_sonnet_1m() {
+test_auto_detect_sonnet_200k() {
   local workdir="$TMPDIR_TEST/test3"
   local fake_home="$TMPDIR_TEST/home3"
   setup_project "$workdir"
@@ -159,11 +159,11 @@ test_auto_detect_sonnet_1m() {
   local result
   result=$(get_context_window "$workdir" "$fake_home" "sess-09-03")
 
-  # With 1M window: 500000/1000000 = 50% → below 60% threshold
-  if [[ "$result" == "below_threshold" ]]; then
-    pass "Test 3: Auto-detect claude-sonnet-4-6 — 1M window, 50% below threshold"
+  # With 200K window: 500000/200000 = 250% → should trigger
+  if [[ "$result" == "triggered" ]]; then
+    pass "Test 3: Auto-detect claude-sonnet-4-6 — 200K window triggers at 250%"
   else
-    fail "Test 3: Auto-detect claude-sonnet-4-6 — expected below_threshold (50%)"
+    fail "Test 3: Auto-detect claude-sonnet-4-6 — expected trigger at 250%"
     echo "  Result: $result"
   fi
 }
@@ -190,20 +190,20 @@ test_auto_detect_haiku() {
 }
 
 # ---------------------------------------------------------------------------
-# Test 5: Compact window caps model window (600K < 1M)
+# Test 5: Compact window caps 1M model window (600K < 1M)
 # ---------------------------------------------------------------------------
 test_compact_window_caps_model() {
   local workdir="$TMPDIR_TEST/test5"
   local fake_home="$TMPDIR_TEST/home5"
   setup_project "$workdir"
-  setup_settings_json "$fake_home" '{"model": "claude-opus-4-6", "env": {"CLAUDE_CODE_AUTO_COMPACT_WINDOW": "600000"}}'
+  setup_settings_json "$fake_home" '{"model": "opus[1m]", "env": {"CLAUDE_CODE_AUTO_COMPACT_WINDOW": "600000"}}'
 
   local result
   result=$(get_context_window "$workdir" "$fake_home" "sess-09-05")
 
   # Model says 1M, but compact_window=600K caps it → 500000/600000 = 83% → triggers (above 80%)
   if [[ "$result" == "triggered" ]]; then
-    pass "Test 5: Compact window (600K) caps model window (1M) — 83% triggers"
+    pass "Test 5: Compact window (600K) caps 1M model window — 83% triggers"
   else
     fail "Test 5: Compact window should cap model window — expected trigger at 83%"
     echo "  Result: $result"
@@ -238,7 +238,7 @@ test_explicit_config_override() {
   local workdir="$TMPDIR_TEST/test7"
   local fake_home="$TMPDIR_TEST/home7"
   setup_project "$workdir"
-  setup_settings_json "$fake_home" '{"model": "claude-opus-4-6", "env": {"CLAUDE_CODE_AUTO_COMPACT_WINDOW": "600000"}}'
+  setup_settings_json "$fake_home" '{"model": "opus[1m]", "env": {"CLAUDE_CODE_AUTO_COMPACT_WINDOW": "600000"}}'
   setup_config "$workdir" "---
 context_window_tokens: 500000
 ---"
@@ -257,7 +257,7 @@ context_window_tokens: 500000
 }
 
 # ---------------------------------------------------------------------------
-# Test 8: Non-numeric compact window is ignored → model fallback
+# Test 8: Non-numeric compact window is ignored → model fallback (200K)
 # ---------------------------------------------------------------------------
 test_non_numeric_compact_window() {
   local workdir="$TMPDIR_TEST/test8"
@@ -268,11 +268,11 @@ test_non_numeric_compact_window() {
   local result
   result=$(get_context_window "$workdir" "$fake_home" "sess-09-08")
 
-  # Non-numeric compact window ignored → model=opus → 1M → 500000/1000000 = 50% → below threshold
-  if [[ "$result" == "below_threshold" ]]; then
-    pass "Test 8: Non-numeric compact window ignored — model fallback to 1M"
+  # Non-numeric compact window ignored → model=claude-opus-4-6 → 200K → 500000/200000 = 250% → triggers
+  if [[ "$result" == "triggered" ]]; then
+    pass "Test 8: Non-numeric compact window ignored — model fallback to 200K triggers"
   else
-    fail "Test 8: Non-numeric compact window should be ignored — expected below_threshold"
+    fail "Test 8: Non-numeric compact window should be ignored — expected trigger at 250%"
     echo "  Result: $result"
   fi
 }
@@ -413,14 +413,56 @@ test_compact_window_below_default() {
 }
 
 # ---------------------------------------------------------------------------
+# Test 15: Model auto-detect opus[1m] (1M context variant) → 1000000
+# ---------------------------------------------------------------------------
+test_auto_detect_opus_1m_variant() {
+  local workdir="$TMPDIR_TEST/test15"
+  local fake_home="$TMPDIR_TEST/home15"
+  setup_project "$workdir"
+  setup_settings_json "$fake_home" '{"model": "opus[1m]"}'
+
+  local result
+  result=$(get_context_window "$workdir" "$fake_home" "sess-09-15")
+
+  # With 1M window: 500000/1000000 = 50% → below 60% threshold
+  if [[ "$result" == "below_threshold" ]]; then
+    pass "Test 15: Auto-detect opus[1m] — 1M window, 50% below threshold"
+  else
+    fail "Test 15: Auto-detect opus[1m] — expected below_threshold (50%)"
+    echo "  Result: $result"
+  fi
+}
+
+# ---------------------------------------------------------------------------
+# Test 16: Model auto-detect sonnet[1m] (1M context variant) → 1000000
+# ---------------------------------------------------------------------------
+test_auto_detect_sonnet_1m_variant() {
+  local workdir="$TMPDIR_TEST/test16"
+  local fake_home="$TMPDIR_TEST/home16"
+  setup_project "$workdir"
+  setup_settings_json "$fake_home" '{"model": "sonnet[1m]"}'
+
+  local result
+  result=$(get_context_window "$workdir" "$fake_home" "sess-09-16")
+
+  # With 1M window: 500000/1000000 = 50% → below 60% threshold
+  if [[ "$result" == "below_threshold" ]]; then
+    pass "Test 16: Auto-detect sonnet[1m] — 1M window, 50% below threshold"
+  else
+    fail "Test 16: Auto-detect sonnet[1m] — expected below_threshold (50%)"
+    echo "  Result: $result"
+  fi
+}
+
+# ---------------------------------------------------------------------------
 # Run all tests
 # ---------------------------------------------------------------------------
 echo "=== Phase 09: Context Window Auto-Detection Tests ==="
 echo ""
 
 test_default_no_settings_no_config
-test_auto_detect_opus_1m
-test_auto_detect_sonnet_1m
+test_auto_detect_opus_200k
+test_auto_detect_sonnet_200k
 test_auto_detect_haiku
 test_compact_window_caps_model
 test_compact_window_higher_than_model
@@ -432,6 +474,8 @@ test_symlink_settings_json
 test_unknown_model_value
 test_compact_window_only_no_model
 test_compact_window_below_default
+test_auto_detect_opus_1m_variant
+test_auto_detect_sonnet_1m_variant
 
 echo ""
 echo "=== Results: $PASS passed, $FAIL failed ==="

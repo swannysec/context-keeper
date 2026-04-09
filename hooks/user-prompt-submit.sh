@@ -144,7 +144,8 @@ if [[ "$config_had_explicit_window" != "true" ]] && [[ -f "$settings_file" ]] &&
     model_value=$(jq -r '.model // empty' "$settings_file" 2>/dev/null) || model_value=""
     if [[ -n "$model_value" ]]; then
         case "$model_value" in
-            claude-opus-4-*|claude-sonnet-4-*) context_window_tokens=1000000 ;;
+            'opus[1m]'|'sonnet[1m]') context_window_tokens=1000000 ;;
+            claude-opus-4-*|claude-sonnet-4-*) context_window_tokens=200000 ;;
             claude-haiku-*) context_window_tokens=200000 ;;
             # Unknown models keep the 200K default
         esac
@@ -372,24 +373,28 @@ if [ "$need_threshold_actions" = true ]; then
 fi
 
 # --- Lifecycle automation: handoff generation ---
-# Only fires when auto_clear is enabled, usage exceeds auto_clear_pct, sync is done,
+# Only fires when auto_clear is enabled, usage exceeds auto_clear_pct,
 # and handoff hasn't already been generated this session.
+# Always injects a fresh sync before handoff — the 60% sync may be stale.
 HANDOFF_FLAG="$FLAG_DIR/handoff-${session_id}"
 if [ "$auto_clear" = "true" ] && [ "$usage_pct" -ge "$auto_clear_pct" ] && ! is_flag_valid "$HANDOFF_FLAG"; then
-    if is_flag_valid "$SYNC_FLAG"; then
-        # Sync already done — generate handoff now
-        . "$SCRIPT_DIR_UPS/lib-handoff.sh"
-        generate_handoff "$session_id" "$cwd" "$usage_pct" "$handoff_ttl"
-        printf '%s' "$(date +%s)" > "$HANDOFF_FLAG"
-        output_context="${output_context}<conkeeper-auto-clear>
+    # Inject fresh sync regardless of prior SYNC_FLAG — context may have
+    # changed significantly since the auto_sync threshold triggered.
+    output_context="${output_context}<conkeeper-auto-sync>
+[ConKeeper] Context usage has reached ${usage_pct}%. Invoke the /memory-sync skill now to preserve session context before compaction. Skip the user approval step — apply updates directly. After syncing, continue with the handoff below.
+</conkeeper-auto-sync>
+"
+    printf '%s' "$(date +%s)" > "$SYNC_FLAG"
+
+    . "$SCRIPT_DIR_UPS/lib-handoff.sh"
+    generate_handoff "$session_id" "$cwd" "$usage_pct" "$handoff_ttl"
+    printf '%s' "$(date +%s)" > "$HANDOFF_FLAG"
+    output_context="${output_context}<conkeeper-auto-clear>
 [ConKeeper] Context at ${usage_pct}%. Memory synced and handoff captured.
 Run /clear to continue with fresh context — your work will resume automatically.
 I cannot run /clear programmatically. You must type it manually.
 </conkeeper-auto-clear>
 "
-    fi
-    # If sync hasn't run yet, it will fire via the normal threshold action.
-    # Handoff will generate on the next prompt after sync completes.
 fi
 
 # --- Single JSON output point ---

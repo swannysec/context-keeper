@@ -5,6 +5,12 @@ All notable changes to ConKeeper will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.2] — 2026-04-09
+
+### Fixed
+- **Model ID detection for 1M context variants** — standard models (`claude-opus-4-6`, `claude-sonnet-4-6`) now correctly map to 200K; new 1M context model IDs (`opus[1m]`, `sonnet[1m]`) map to 1M
+- **Fresh sync before auto-clear** — auto-clear now always injects a sync before handoff generation, regardless of whether the 60% auto-sync already fired (the earlier sync may be stale by the time auto-clear triggers)
+
 ## [1.3.1] — 2026-04-07
 
 ### Fixed
