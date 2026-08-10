@@ -32,9 +32,12 @@ View and modify ConKeeper configuration for the current project.
 | `suggest_memories` | true/false | Whether to suggest memory additions |
 | `auto_load` | true/false | Auto-load memory at session start |
 | `output_style` | quiet/normal/explanatory | Output verbosity |
-| `auto_sync_threshold` | 0-100 (default: 60) | Context % to trigger auto memory-sync |
-| `hard_block_threshold` | 0-100 (default: 80) | Context % to block prompts until sync |
-| `context_window_tokens` | integer (default: 200000) | Context window size in tokens. Auto-detected from model if not set. |
+| `auto_sync_threshold` | 0-100 (default: 85) | Context % to trigger auto memory-sync |
+| `hard_block_threshold` | 0-100 (default: 95) | Context % to block prompts until sync |
+| `context_window_tokens` | integer (default: 1000000, 200000 for Haiku) | Context window size in tokens. Auto-detected from the running model if not set. |
+| `context_brackets` | true/false (default: true) | Enable/disable context behavioral brackets |
+| `bracket_warn` | 0-100 (default: 85) | Context % where the WARN bracket starts |
+| `bracket_critical` | 0-100 (default: 95) | Context % where the CRITICAL bracket starts |
 | `correction_sensitivity` | low/medium (default: low) | Regex sensitivity for correction detection |
 | `staleness_commits` | integer (default: 5, 0 = disable) | Commits since last file update before flagging memory as stale |
 | `project_search_paths` | absent=off, disabled=permanently off, array=active | Parent directories to search for cross-project memory |
@@ -54,9 +57,9 @@ Check for `.claude/memory/.memory-config.md`:
 > - Suggest memories: [true/false] (default: true)
 > - Auto load: [true/false] (default: true)
 > - Output style: [quiet/normal/explanatory] (default: normal)
-> - Auto-sync threshold: [0-100] (default: 60)
-> - Hard-block threshold: [0-100] (default: 80)
-> - Context window tokens: [integer] (default: auto-detected from model, fallback: 200000)
+> - Auto-sync threshold: [0-100] (default: 85)
+> - Hard-block threshold: [0-100] (default: 95)
+> - Context window tokens: [integer] (default: auto-detected from running model, fallback: 1000000; 200000 for Haiku)
 > - Observation hook: [true/false] (default: true)
 > - Observation detail: [full/stubs_only/off] (default: full)
 > - Correction sensitivity: [low/medium] (default: low)
@@ -78,9 +81,9 @@ token_budget: standard
 suggest_memories: true
 auto_load: true
 output_style: normal
-auto_sync_threshold: 60
-hard_block_threshold: 80
-context_window_tokens: 200000
+auto_sync_threshold: 85
+hard_block_threshold: 95
+context_window_tokens: 1000000
 observation_hook: true
 observation_detail: full
 correction_sensitivity: low
@@ -101,10 +104,12 @@ staleness_commits: 5
 - `stubs_only`: Stub entries for all tools (timestamp, tool, type, path, status only)
 - `off`: No observation logging (same as `observation_hook: false`)
 
-> **Auto-detection:** If `context_window_tokens` is not explicitly set, ConKeeper reads
-> `~/.claude/settings.json` to detect the active model's context window. Models with
-> the `[1m]` variant (e.g., `opus[1m]`) use a 1,000,000 token window. All others
-> default to 200,000. Set `context_window_tokens` explicitly to override auto-detection.
+> **Auto-detection:** If `context_window_tokens` is not explicitly set, ConKeeper detects
+> the running model — first from the transcript's most recent assistant message, then from
+> `~/.claude/settings.json` — and sizes the window accordingly. Every current non-Haiku model
+> (Opus, Sonnet, and their `[1m]` variants) uses a 1,000,000 token window; Haiku uses 200,000.
+> Unknown or future models default to 1,000,000. `CLAUDE_CODE_AUTO_COMPACT_WINDOW`, if set,
+> caps the window. Set `context_window_tokens` explicitly to override auto-detection.
 
 ## Correction Detection Settings
 

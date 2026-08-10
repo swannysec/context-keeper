@@ -150,7 +150,7 @@ ADR structure:
 
 ## Auto-Sync Mode (Context Preservation)
 
-ConKeeper's UserPromptSubmit hook monitors context window usage. When usage exceeds the configured threshold (default: 60%), the hook injects instructions to trigger an automatic memory sync.
+ConKeeper's UserPromptSubmit hook monitors context window usage. When usage exceeds the configured threshold (default: 85%), the hook injects instructions to trigger an automatic memory sync.
 
 ### Differences from Manual Sync
 
@@ -173,9 +173,9 @@ ConKeeper's UserPromptSubmit hook monitors context window usage. When usage exce
 ### Configuration
 
 Thresholds are configured in `.claude/memory/.memory-config.md`:
-- `auto_sync_threshold`: Percentage at which auto-sync triggers (default: 60)
-- `hard_block_threshold`: Percentage at which the hook blocks prompts until manual sync (default: 80)
-- `context_window_tokens`: Total context window size in tokens (default: 200000) (auto-detected from model if not explicitly configured)
+- `auto_sync_threshold`: Percentage at which auto-sync triggers (default: 85)
+- `hard_block_threshold`: Percentage at which the hook blocks prompts until manual sync (default: 95)
+- `context_window_tokens`: Total context window size in tokens (default: 1000000; 200000 for Haiku) (auto-detected from the running model if not explicitly configured)
 
 See the schema documentation for details.
 

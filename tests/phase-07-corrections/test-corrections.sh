@@ -258,9 +258,10 @@ test_token_monitoring_unchanged() {
   local workdir="$TMPDIR_TEST/test8"
   setup_project "$workdir"
 
-  # Create a transcript with high token usage (above default 60% threshold)
+  # Create a transcript with high token usage (above the default warn threshold).
+  # 900000 tokens against the default 1M window = 90% → warn tier emits JSON.
   local transcript="$workdir/transcript.jsonl"
-  echo '{"type":"assistant","message":{"usage":{"input_tokens":130000,"cache_read_input_tokens":0,"cache_creation_input_tokens":0}}}' > "$transcript"
+  echo '{"type":"assistant","message":{"usage":{"input_tokens":900000,"cache_read_input_tokens":0,"cache_creation_input_tokens":0}}}' > "$transcript"
 
   # Clean any existing flags for this session
   local flag_dir="${TMPDIR:-/tmp}/conkeeper"

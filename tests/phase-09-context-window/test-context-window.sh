@@ -1,6 +1,15 @@
 #!/usr/bin/env bash
 # Phase 09: Context Window Auto-Detection Tests
 # Run: bash tests/phase-09-context-window/test-context-window.sh
+#
+# Window resolution (post-1M-default):
+#   - Default (no model anywhere) .............. 1,000,000
+#   - opus / sonnet / *[1m] / unknown / future . 1,000,000
+#   - *haiku* .................................. 200,000
+#   - Model is read from the transcript's last assistant .message.model FIRST,
+#     falling back to settings.json .model.
+#   - Explicit .memory-config.md context_window_tokens overrides everything.
+#   - CLAUDE_CODE_AUTO_COMPACT_WINDOW caps the window via min().
 
 set -euo pipefail
 
@@ -30,16 +39,9 @@ fail() {
   echo "FAIL: $1"
 }
 
-# Helper: create a project with memory directory, transcript, and flag dir
 setup_project() {
   local base="$1"
   mkdir -p "$base/.claude/memory/sessions"
-
-  # Create a transcript with known token count for deterministic percentage calc
-  local transcript="$base/transcript.jsonl"
-  echo '{"type":"assistant","message":{"usage":{"input_tokens":1000,"cache_read_input_tokens":0,"cache_creation_input_tokens":0}}}' > "$transcript"
-
-  # Ensure flag dir exists
   local flag_dir="${TMPDIR:-/tmp}/conkeeper"
   mkdir -p "$flag_dir"
 }
@@ -59,23 +61,27 @@ setup_settings_json() {
   printf '%s' "$content" > "$home_dir/.claude/settings.json"
 }
 
-# Helper: run the hook and capture the resolved context_window_tokens value
-# We use a high token count so that the usage percentage output reveals the window size.
-# With 500000 input_tokens: pct = (500000*100)/window
-#   window=200000 → 250  (above any threshold)
-#   window=600000 → 83   (above 80% hard-block, triggers)
-#   window=1000000 → 50  (below default 60% threshold)
-#   window=500000 → 100
-get_context_window() {
+# Probe the resolved window by driving a fixed 900,000-token transcript through
+# the hook and classifying which tier fires. With 900K tokens:
+#   window 1,000,000 → 90%  → WARN tier   (85 <= pct < 95)   → "warn"
+#   window   200,000 → 450% → CRITICAL    (pct >= 95)        → "critical"
+#   window   400,000 → 225% → CRITICAL
+# Both windows produce a positive, distinguishable signal (no silent-crash
+# ambiguity). An optional transcript model lets us test transcript precedence.
+probe() {
   local workdir="$1"
   local fake_home="$2"
   local session_id="${3:-sess-test-09}"
+  local transcript_model="${4:-}"
 
   local transcript="$workdir/transcript.jsonl"
-  # Write a transcript with 500000 tokens for percentage calculation
-  echo '{"type":"assistant","message":{"usage":{"input_tokens":500000,"cache_read_input_tokens":0,"cache_creation_input_tokens":0}}}' > "$transcript"
+  if [[ -n "$transcript_model" ]]; then
+    printf '{"type":"assistant","message":{"model":"%s","usage":{"input_tokens":900000,"cache_read_input_tokens":0,"cache_creation_input_tokens":0}}}\n' \
+      "$transcript_model" > "$transcript"
+  else
+    echo '{"type":"assistant","message":{"usage":{"input_tokens":900000,"cache_read_input_tokens":0,"cache_creation_input_tokens":0}}}' > "$transcript"
+  fi
 
-  # Clean any existing flags
   local flag_dir="${TMPDIR:-/tmp}/conkeeper"
   rm -f "$flag_dir/synced-${session_id}" "$flag_dir/blocked-${session_id}"
 
@@ -87,395 +93,204 @@ get_context_window() {
     --arg um "test prompt" \
     '{session_id: $sid, transcript_path: $tp, cwd: $cwd, user_message: $um}')
 
-  local output exit_code
+  local output
   HOME="$fake_home" output=$(printf '%s' "$json" | bash "$REPO_ROOT/hooks/user-prompt-submit.sh" 2>/dev/null) || true
   HOME="$ORIG_HOME"
 
-  # Detect by output behavior:
-  # - Output contains conkeeper-auto-sync → triggered auto-sync (window caused >= 60%)
-  # - No auto-sync in output → below sync threshold (may still have bracket directives)
-  if echo "$output" | grep -q "conkeeper-auto-sync"; then
-    echo "triggered"
-  else
-    echo "below_threshold"
-  fi
-
-  # Clean up flags
   rm -f "$flag_dir/synced-${session_id}" "$flag_dir/blocked-${session_id}"
+
+  if printf '%s' "$output" | grep -q '\[CRITICAL\]'; then
+    echo "critical"
+  elif printf '%s' "$output" | grep -q '\[WARN\]'; then
+    echo "warn"
+  else
+    echo "silent"
+  fi
 }
 
-# ---------------------------------------------------------------------------
-# Test 1: Default (no settings, no config) → 200000
-# ---------------------------------------------------------------------------
+expect() {
+  local desc="$1" got="$2" want="$3"
+  if [[ "$got" == "$want" ]]; then
+    pass "$desc"
+  else
+    fail "$desc (got: $got, want: $want)"
+  fi
+}
+
+# 1: Default (no settings, no config) → 1M window → 90% → warn
 test_default_no_settings_no_config() {
-  local workdir="$TMPDIR_TEST/test1"
-  local fake_home="$TMPDIR_TEST/home1"
-  setup_project "$workdir"
-  mkdir -p "$fake_home/.claude"
-  # No settings.json, no .memory-config.md
-
-  local result
-  result=$(get_context_window "$workdir" "$fake_home" "sess-09-01")
-
-  # With 200K window: 500000/200000 = 250% → should trigger
-  if [[ "$result" == "triggered" ]]; then
-    pass "Test 1: Default (no settings, no config) — 200K window triggers at 250%"
-  else
-    fail "Test 1: Default (no settings, no config) — expected trigger at 250%"
-    echo "  Result: $result"
-  fi
+  local w="$TMPDIR_TEST/t1" h="$TMPDIR_TEST/h1"
+  setup_project "$w"; mkdir -p "$h/.claude"
+  expect "Test 1: Default (no settings/config) → 1M window (warn at 90%)" \
+    "$(probe "$w" "$h" sess-09-01)" warn
 }
 
-# ---------------------------------------------------------------------------
-# Test 2: Model auto-detect claude-opus-4-6 (standard) → 200000
-# ---------------------------------------------------------------------------
-test_auto_detect_opus_200k() {
-  local workdir="$TMPDIR_TEST/test2"
-  local fake_home="$TMPDIR_TEST/home2"
-  setup_project "$workdir"
-  setup_settings_json "$fake_home" '{"model": "claude-opus-4-6"}'
-
-  local result
-  result=$(get_context_window "$workdir" "$fake_home" "sess-09-02")
-
-  # With 200K window: 500000/200000 = 250% → should trigger
-  if [[ "$result" == "triggered" ]]; then
-    pass "Test 2: Auto-detect claude-opus-4-6 — 200K window triggers at 250%"
-  else
-    fail "Test 2: Auto-detect claude-opus-4-6 — expected trigger at 250%"
-    echo "  Result: $result"
-  fi
+# 2: settings opus-4-6 → 1M
+test_opus_1m() {
+  local w="$TMPDIR_TEST/t2" h="$TMPDIR_TEST/h2"
+  setup_project "$w"; setup_settings_json "$h" '{"model": "claude-opus-4-6"}'
+  expect "Test 2: claude-opus-4-6 → 1M window (warn)" \
+    "$(probe "$w" "$h" sess-09-02)" warn
 }
 
-# ---------------------------------------------------------------------------
-# Test 3: Model auto-detect claude-sonnet-4-6 (standard) → 200000
-# ---------------------------------------------------------------------------
-test_auto_detect_sonnet_200k() {
-  local workdir="$TMPDIR_TEST/test3"
-  local fake_home="$TMPDIR_TEST/home3"
-  setup_project "$workdir"
-  setup_settings_json "$fake_home" '{"model": "claude-sonnet-4-6"}'
-
-  local result
-  result=$(get_context_window "$workdir" "$fake_home" "sess-09-03")
-
-  # With 200K window: 500000/200000 = 250% → should trigger
-  if [[ "$result" == "triggered" ]]; then
-    pass "Test 3: Auto-detect claude-sonnet-4-6 — 200K window triggers at 250%"
-  else
-    fail "Test 3: Auto-detect claude-sonnet-4-6 — expected trigger at 250%"
-    echo "  Result: $result"
-  fi
+# 3: settings sonnet-4-6 → 1M
+test_sonnet_1m() {
+  local w="$TMPDIR_TEST/t3" h="$TMPDIR_TEST/h3"
+  setup_project "$w"; setup_settings_json "$h" '{"model": "claude-sonnet-4-6"}'
+  expect "Test 3: claude-sonnet-4-6 → 1M window (warn)" \
+    "$(probe "$w" "$h" sess-09-03)" warn
 }
 
-# ---------------------------------------------------------------------------
-# Test 4: Model auto-detect haiku → 200000
-# ---------------------------------------------------------------------------
-test_auto_detect_haiku() {
-  local workdir="$TMPDIR_TEST/test4"
-  local fake_home="$TMPDIR_TEST/home4"
-  setup_project "$workdir"
-  setup_settings_json "$fake_home" '{"model": "claude-haiku-4-5-20251001"}'
-
-  local result
-  result=$(get_context_window "$workdir" "$fake_home" "sess-09-04")
-
-  # With 200K window: 500000/200000 = 250% → should trigger
-  if [[ "$result" == "triggered" ]]; then
-    pass "Test 4: Auto-detect claude-haiku — 200K window triggers"
-  else
-    fail "Test 4: Auto-detect claude-haiku — expected trigger at 250%"
-    echo "  Result: $result"
-  fi
+# 4: settings haiku → 200K → critical
+test_haiku_200k() {
+  local w="$TMPDIR_TEST/t4" h="$TMPDIR_TEST/h4"
+  setup_project "$w"; setup_settings_json "$h" '{"model": "claude-haiku-4-5-20251001"}'
+  expect "Test 4: claude-haiku → 200K window (critical at 450%)" \
+    "$(probe "$w" "$h" sess-09-04)" critical
 }
 
-# ---------------------------------------------------------------------------
-# Test 5: Compact window caps 1M model window (600K < 1M)
-# ---------------------------------------------------------------------------
-test_compact_window_caps_model() {
-  local workdir="$TMPDIR_TEST/test5"
-  local fake_home="$TMPDIR_TEST/home5"
-  setup_project "$workdir"
-  setup_settings_json "$fake_home" '{"model": "opus[1m]", "env": {"CLAUDE_CODE_AUTO_COMPACT_WINDOW": "600000"}}'
-
-  local result
-  result=$(get_context_window "$workdir" "$fake_home" "sess-09-05")
-
-  # Model says 1M, but compact_window=600K caps it → 500000/600000 = 83% → triggers (above 80%)
-  if [[ "$result" == "triggered" ]]; then
-    pass "Test 5: Compact window (600K) caps 1M model window — 83% triggers"
-  else
-    fail "Test 5: Compact window should cap model window — expected trigger at 83%"
-    echo "  Result: $result"
-  fi
+# 5: compact window caps 1M model to 400K → 225% → critical
+test_compact_caps_model() {
+  local w="$TMPDIR_TEST/t5" h="$TMPDIR_TEST/h5"
+  setup_project "$w"; setup_settings_json "$h" '{"model": "opus[1m]", "env": {"CLAUDE_CODE_AUTO_COMPACT_WINDOW": "400000"}}'
+  expect "Test 5: compact (400K) caps 1M model → critical" \
+    "$(probe "$w" "$h" sess-09-05)" critical
 }
 
-# ---------------------------------------------------------------------------
-# Test 6: Compact window higher than model → model wins (min)
-# ---------------------------------------------------------------------------
-test_compact_window_higher_than_model() {
-  local workdir="$TMPDIR_TEST/test6"
-  local fake_home="$TMPDIR_TEST/home6"
-  setup_project "$workdir"
-  setup_settings_json "$fake_home" '{"model": "claude-haiku-4-5-20251001", "env": {"CLAUDE_CODE_AUTO_COMPACT_WINDOW": "500000"}}'
-
-  local result
-  result=$(get_context_window "$workdir" "$fake_home" "sess-09-06")
-
-  # Model says 200K, compact says 500K → min is 200K → 500000/200000 = 250% → triggers
-  if [[ "$result" == "triggered" ]]; then
-    pass "Test 6: Compact window (500K) higher than model (200K) — model wins, 250% triggers"
-  else
-    fail "Test 6: Model window should win when lower — expected trigger at 250%"
-    echo "  Result: $result"
-  fi
+# 6: compact (500K) higher than haiku (200K) → model wins (min) → critical
+test_compact_higher_than_model() {
+  local w="$TMPDIR_TEST/t6" h="$TMPDIR_TEST/h6"
+  setup_project "$w"; setup_settings_json "$h" '{"model": "claude-haiku-4-5-20251001", "env": {"CLAUDE_CODE_AUTO_COMPACT_WINDOW": "500000"}}'
+  expect "Test 6: compact (500K) > haiku (200K) → min 200K → critical" \
+    "$(probe "$w" "$h" sess-09-06)" critical
 }
 
-# ---------------------------------------------------------------------------
-# Test 7: Explicit .memory-config.md override wins over everything
-# ---------------------------------------------------------------------------
+# 7: explicit config override wins over model (1M)
 test_explicit_config_override() {
-  local workdir="$TMPDIR_TEST/test7"
-  local fake_home="$TMPDIR_TEST/home7"
-  setup_project "$workdir"
-  setup_settings_json "$fake_home" '{"model": "opus[1m]", "env": {"CLAUDE_CODE_AUTO_COMPACT_WINDOW": "600000"}}'
-  setup_config "$workdir" "---
-context_window_tokens: 500000
+  local w="$TMPDIR_TEST/t7" h="$TMPDIR_TEST/h7"
+  setup_project "$w"; setup_settings_json "$h" '{"model": "opus[1m]"}'
+  setup_config "$w" "---
+context_window_tokens: 300000
 ---"
-
-  local result
-  result=$(get_context_window "$workdir" "$fake_home" "sess-09-07")
-
-  # Config says 500K → 500000/500000 = 100% → triggers
-  # If model (1M) or compact (600K) won, would be 50% or 83%
-  if [[ "$result" == "triggered" ]]; then
-    pass "Test 7: Explicit config override (500K) wins over model (1M) and compact (600K)"
-  else
-    fail "Test 7: Explicit config override should win — expected trigger at 100%"
-    echo "  Result: $result"
-  fi
+  # config 300K → 900K/300K = 300% → critical. If model (1M) won → warn.
+  expect "Test 7: explicit config (300K) overrides model (1M) → critical" \
+    "$(probe "$w" "$h" sess-09-07)" critical
 }
 
-# ---------------------------------------------------------------------------
-# Test 8: Non-numeric compact window is ignored → model fallback (200K)
-# ---------------------------------------------------------------------------
-test_non_numeric_compact_window() {
-  local workdir="$TMPDIR_TEST/test8"
-  local fake_home="$TMPDIR_TEST/home8"
-  setup_project "$workdir"
-  setup_settings_json "$fake_home" '{"model": "claude-opus-4-6", "env": {"CLAUDE_CODE_AUTO_COMPACT_WINDOW": "not-a-number"}}'
-
-  local result
-  result=$(get_context_window "$workdir" "$fake_home" "sess-09-08")
-
-  # Non-numeric compact window ignored → model=claude-opus-4-6 → 200K → 500000/200000 = 250% → triggers
-  if [[ "$result" == "triggered" ]]; then
-    pass "Test 8: Non-numeric compact window ignored — model fallback to 200K triggers"
-  else
-    fail "Test 8: Non-numeric compact window should be ignored — expected trigger at 250%"
-    echo "  Result: $result"
-  fi
+# 8: non-numeric compact ignored → haiku model 200K → critical
+test_non_numeric_compact() {
+  local w="$TMPDIR_TEST/t8" h="$TMPDIR_TEST/h8"
+  setup_project "$w"; setup_settings_json "$h" '{"model": "claude-haiku-4-5-20251001", "env": {"CLAUDE_CODE_AUTO_COMPACT_WINDOW": "not-a-number"}}'
+  expect "Test 8: non-numeric compact ignored → haiku 200K → critical" \
+    "$(probe "$w" "$h" sess-09-08)" critical
 }
 
-# ---------------------------------------------------------------------------
-# Test 9: Malformed settings.json → fallback to 200000
-# ---------------------------------------------------------------------------
-test_malformed_settings_json() {
-  local workdir="$TMPDIR_TEST/test9"
-  local fake_home="$TMPDIR_TEST/home9"
-  setup_project "$workdir"
-  mkdir -p "$fake_home/.claude"
-  printf '%s' 'not valid json {{{' > "$fake_home/.claude/settings.json"
-
-  local result
-  result=$(get_context_window "$workdir" "$fake_home" "sess-09-09")
-
-  # Malformed JSON → jq fails → fallback to 200K → 250% → triggers
-  if [[ "$result" == "triggered" ]]; then
-    pass "Test 9: Malformed settings.json — graceful fallback to 200K"
-  else
-    fail "Test 9: Malformed settings.json — expected fallback trigger at 250%"
-    echo "  Result: $result"
-  fi
+# 9: malformed settings.json → graceful default 1M → warn
+test_malformed_settings() {
+  local w="$TMPDIR_TEST/t9" h="$TMPDIR_TEST/h9"
+  setup_project "$w"; mkdir -p "$h/.claude"
+  printf '%s' 'not valid json {{{' > "$h/.claude/settings.json"
+  expect "Test 9: malformed settings.json → graceful 1M default (warn)" \
+    "$(probe "$w" "$h" sess-09-09)" warn
 }
 
-# ---------------------------------------------------------------------------
-# Test 10: Missing model field → fallback to 200000
-# ---------------------------------------------------------------------------
-test_missing_model_field() {
-  local workdir="$TMPDIR_TEST/test10"
-  local fake_home="$TMPDIR_TEST/home10"
-  setup_project "$workdir"
-  setup_settings_json "$fake_home" '{}'
-
-  local result
-  result=$(get_context_window "$workdir" "$fake_home" "sess-09-10")
-
-  # Empty object → model empty, no compact window → fallback to 200K → 250% → triggers
-  if [[ "$result" == "triggered" ]]; then
-    pass "Test 10: Missing model field — graceful fallback to 200K"
-  else
-    fail "Test 10: Missing model field — expected fallback trigger at 250%"
-    echo "  Result: $result"
-  fi
+# 10: missing model field → default 1M → warn
+test_missing_model() {
+  local w="$TMPDIR_TEST/t10" h="$TMPDIR_TEST/h10"
+  setup_project "$w"; setup_settings_json "$h" '{}'
+  expect "Test 10: missing model field → 1M default (warn)" \
+    "$(probe "$w" "$h" sess-09-10)" warn
 }
 
-# ---------------------------------------------------------------------------
-# Test 11: Symlink settings.json is skipped (security)
-# ---------------------------------------------------------------------------
-test_symlink_settings_json() {
-  local workdir="$TMPDIR_TEST/test11"
-  local fake_home="$TMPDIR_TEST/home11"
-  setup_project "$workdir"
-
-  # Create a real settings file in a separate location
-  local real_settings="$TMPDIR_TEST/real_settings.json"
-  printf '%s' '{"model": "claude-opus-4-6"}' > "$real_settings"
-
-  # Create a symlink to it
-  mkdir -p "$fake_home/.claude"
-  ln -s "$real_settings" "$fake_home/.claude/settings.json"
-
-  local result
-  result=$(get_context_window "$workdir" "$fake_home" "sess-09-11")
-
-  # Symlink should be skipped → fallback to 200K → 250% → triggers
-  if [[ "$result" == "triggered" ]]; then
-    pass "Test 11: Symlink settings.json is skipped — fallback to 200K"
-  else
-    fail "Test 11: Symlink settings.json should be skipped — expected fallback trigger"
-    echo "  Result: $result"
-  fi
+# 11: symlink settings.json skipped → default 1M → warn
+test_symlink_settings() {
+  local w="$TMPDIR_TEST/t11" h="$TMPDIR_TEST/h11"
+  setup_project "$w"
+  local real="$TMPDIR_TEST/real_settings.json"
+  printf '%s' '{"model": "claude-haiku-4-5-20251001"}' > "$real"
+  mkdir -p "$h/.claude"; ln -s "$real" "$h/.claude/settings.json"
+  # Symlink skipped → no model from settings → default 1M → warn (NOT haiku/critical)
+  expect "Test 11: symlink settings.json skipped → 1M default (warn)" \
+    "$(probe "$w" "$h" sess-09-11)" warn
 }
 
-# ---------------------------------------------------------------------------
-# Test 12: Unknown model value → fallback to 200000
-# ---------------------------------------------------------------------------
-test_unknown_model_value() {
-  local workdir="$TMPDIR_TEST/test12"
-  local fake_home="$TMPDIR_TEST/home12"
-  setup_project "$workdir"
-  setup_settings_json "$fake_home" '{"model": "future-model-5-0"}'
-
-  local result
-  result=$(get_context_window "$workdir" "$fake_home" "sess-09-12")
-
-  # Unknown model → fallback to 200K → 250% → triggers
-  if [[ "$result" == "triggered" ]]; then
-    pass "Test 12: Unknown model value (future-model-5-0) — fallback to 200K"
-  else
-    fail "Test 12: Unknown model value — expected fallback trigger at 250%"
-    echo "  Result: $result"
-  fi
+# 12: unknown/future model → 1M default → warn
+test_unknown_model() {
+  local w="$TMPDIR_TEST/t12" h="$TMPDIR_TEST/h12"
+  setup_project "$w"; setup_settings_json "$h" '{"model": "future-model-9-0"}'
+  expect "Test 12: unknown/future model → 1M default (warn)" \
+    "$(probe "$w" "$h" sess-09-12)" warn
 }
 
-# ---------------------------------------------------------------------------
-# Test 13: Compact window only (no model) → uses compact window
-# ---------------------------------------------------------------------------
-test_compact_window_only_no_model() {
-  local workdir="$TMPDIR_TEST/test13"
-  local fake_home="$TMPDIR_TEST/home13"
-  setup_project "$workdir"
-  setup_settings_json "$fake_home" '{"env": {"CLAUDE_CODE_AUTO_COMPACT_WINDOW": "1000000"}}'
-
-  local result
-  result=$(get_context_window "$workdir" "$fake_home" "sess-09-13")
-
-  # No model → default 200K, compact=1M → min(200K,1M) = 200K → 250% → triggers
-  # (compact_window is NOT lower, so model default 200K stands)
-  if [[ "$result" == "triggered" ]]; then
-    pass "Test 13: Compact window (1M) with no model — default 200K stands (min), 250% triggers"
-  else
-    fail "Test 13: Compact window only — expected trigger at 250%"
-    echo "  Result: $result"
-  fi
+# 13: compact (1M) with no model → default 1M, min stays 1M → warn
+test_compact_only_1m() {
+  local w="$TMPDIR_TEST/t13" h="$TMPDIR_TEST/h13"
+  setup_project "$w"; setup_settings_json "$h" '{"env": {"CLAUDE_CODE_AUTO_COMPACT_WINDOW": "1000000"}}'
+  expect "Test 13: compact (1M) no model → 1M stays (warn)" \
+    "$(probe "$w" "$h" sess-09-13)" warn
 }
 
-# ---------------------------------------------------------------------------
-# Test 14: Compact window only (no model), compact is lower than default
-# ---------------------------------------------------------------------------
-test_compact_window_below_default() {
-  local workdir="$TMPDIR_TEST/test14"
-  local fake_home="$TMPDIR_TEST/home14"
-  setup_project "$workdir"
-  setup_settings_json "$fake_home" '{"env": {"CLAUDE_CODE_AUTO_COMPACT_WINDOW": "100000"}}'
-
-  local result
-  result=$(get_context_window "$workdir" "$fake_home" "sess-09-14")
-
-  # No model → default 200K, compact=100K → min(200K,100K) = 100K → 500000/100000 = 500% → triggers
-  if [[ "$result" == "triggered" ]]; then
-    pass "Test 14: Compact window (100K) below default (200K) — compact caps, 500% triggers"
-  else
-    fail "Test 14: Compact window below default — expected trigger at 500%"
-    echo "  Result: $result"
-  fi
+# 14: compact (400K) below default → caps to 400K → critical
+test_compact_below_default() {
+  local w="$TMPDIR_TEST/t14" h="$TMPDIR_TEST/h14"
+  setup_project "$w"; setup_settings_json "$h" '{"env": {"CLAUDE_CODE_AUTO_COMPACT_WINDOW": "400000"}}'
+  expect "Test 14: compact (400K) below 1M default → caps → critical" \
+    "$(probe "$w" "$h" sess-09-14)" critical
 }
 
-# ---------------------------------------------------------------------------
-# Test 15: Model auto-detect opus[1m] (1M context variant) → 1000000
-# ---------------------------------------------------------------------------
-test_auto_detect_opus_1m_variant() {
-  local workdir="$TMPDIR_TEST/test15"
-  local fake_home="$TMPDIR_TEST/home15"
-  setup_project "$workdir"
-  setup_settings_json "$fake_home" '{"model": "opus[1m]"}'
-
-  local result
-  result=$(get_context_window "$workdir" "$fake_home" "sess-09-15")
-
-  # With 1M window: 500000/1000000 = 50% → below 60% threshold
-  if [[ "$result" == "below_threshold" ]]; then
-    pass "Test 15: Auto-detect opus[1m] — 1M window, 50% below threshold"
-  else
-    fail "Test 15: Auto-detect opus[1m] — expected below_threshold (50%)"
-    echo "  Result: $result"
-  fi
+# 15: opus[1m] variant → 1M → warn
+test_opus_1m_variant() {
+  local w="$TMPDIR_TEST/t15" h="$TMPDIR_TEST/h15"
+  setup_project "$w"; setup_settings_json "$h" '{"model": "opus[1m]"}'
+  expect "Test 15: opus[1m] variant → 1M (warn)" \
+    "$(probe "$w" "$h" sess-09-15)" warn
 }
 
-# ---------------------------------------------------------------------------
-# Test 16: Model auto-detect sonnet[1m] (1M context variant) → 1000000
-# ---------------------------------------------------------------------------
-test_auto_detect_sonnet_1m_variant() {
-  local workdir="$TMPDIR_TEST/test16"
-  local fake_home="$TMPDIR_TEST/home16"
-  setup_project "$workdir"
-  setup_settings_json "$fake_home" '{"model": "sonnet[1m]"}'
-
-  local result
-  result=$(get_context_window "$workdir" "$fake_home" "sess-09-16")
-
-  # With 1M window: 500000/1000000 = 50% → below 60% threshold
-  if [[ "$result" == "below_threshold" ]]; then
-    pass "Test 16: Auto-detect sonnet[1m] — 1M window, 50% below threshold"
-  else
-    fail "Test 16: Auto-detect sonnet[1m] — expected below_threshold (50%)"
-    echo "  Result: $result"
-  fi
+# 16: sonnet[1m] variant → 1M → warn
+test_sonnet_1m_variant() {
+  local w="$TMPDIR_TEST/t16" h="$TMPDIR_TEST/h16"
+  setup_project "$w"; setup_settings_json "$h" '{"model": "sonnet[1m]"}'
+  expect "Test 16: sonnet[1m] variant → 1M (warn)" \
+    "$(probe "$w" "$h" sess-09-16)" warn
 }
 
-# ---------------------------------------------------------------------------
-# Run all tests
-# ---------------------------------------------------------------------------
+# 17: transcript model (haiku) overrides settings model (opus) → 200K → critical
+test_transcript_model_overrides_settings() {
+  local w="$TMPDIR_TEST/t17" h="$TMPDIR_TEST/h17"
+  setup_project "$w"; setup_settings_json "$h" '{"model": "claude-opus-4-8"}'
+  expect "Test 17: transcript model (haiku) overrides settings (opus) → 200K → critical" \
+    "$(probe "$w" "$h" sess-09-17 claude-haiku-4-5-20251001)" critical
+}
+
+# 18: transcript model (opus) overrides settings model (haiku) → 1M → warn
+test_transcript_model_opus_overrides_haiku() {
+  local w="$TMPDIR_TEST/t18" h="$TMPDIR_TEST/h18"
+  setup_project "$w"; setup_settings_json "$h" '{"model": "claude-haiku-4-5-20251001"}'
+  expect "Test 18: transcript model (opus) overrides settings (haiku) → 1M → warn" \
+    "$(probe "$w" "$h" sess-09-18 claude-opus-4-8)" warn
+}
+
 echo "=== Phase 09: Context Window Auto-Detection Tests ==="
 echo ""
 
 test_default_no_settings_no_config
-test_auto_detect_opus_200k
-test_auto_detect_sonnet_200k
-test_auto_detect_haiku
-test_compact_window_caps_model
-test_compact_window_higher_than_model
+test_opus_1m
+test_sonnet_1m
+test_haiku_200k
+test_compact_caps_model
+test_compact_higher_than_model
 test_explicit_config_override
-test_non_numeric_compact_window
-test_malformed_settings_json
-test_missing_model_field
-test_symlink_settings_json
-test_unknown_model_value
-test_compact_window_only_no_model
-test_compact_window_below_default
-test_auto_detect_opus_1m_variant
-test_auto_detect_sonnet_1m_variant
+test_non_numeric_compact
+test_malformed_settings
+test_missing_model
+test_symlink_settings
+test_unknown_model
+test_compact_only_1m
+test_compact_below_default
+test_opus_1m_variant
+test_sonnet_1m_variant
+test_transcript_model_overrides_settings
+test_transcript_model_opus_overrides_haiku
 
 echo ""
 echo "=== Results: $PASS passed, $FAIL failed ==="

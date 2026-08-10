@@ -5,6 +5,16 @@ All notable changes to ConKeeper will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] — 2026-08-10
+
+### Fixed
+- **Context window default corrected to 1M** — the model→window map resolved standard model IDs (`claude-opus-4-*`, `claude-sonnet-4-*`) to 200K, but every current non-Haiku model has a 1M window. Usage percentage was inflated ~5×, producing false context pressure (e.g. a 1M-context Opus session reporting 250%). The default is now 1M; only Haiku maps to 200K; unknown/future models default to 1M (the safe direction). `CLAUDE_CODE_AUTO_COMPACT_WINDOW` still caps the window via `min()`.
+- **Running model read from the transcript** — the model is now detected from the transcript's most recent assistant message (the model actually in use this turn), falling back to `~/.claude/settings.json`. Fixes stale or mid-session-changed model detection.
+
+### Changed
+- **Two-tier context brackets** — the four FRESH/MODERATE/DEPLETED/CRITICAL tiers are replaced by two: **WARN** (default 85%, tells the agent to warn the user and suggest a handoff/sync) and **CRITICAL** (default 95%, brevity + no new multi-step work). Nothing is injected below 85% real usage. **Breaking for bracket config:** `bracket_fresh`, `bracket_moderate`, and `bracket_depleted` are removed; use `bracket_warn` and `bracket_critical`.
+- **Threshold defaults raised** — `auto_sync_threshold` 60 → 85 and `hard_block_threshold` 80 → 95, aligning memory-sync and hard-block with the two-tier brackets so nothing fires before genuine 85% usage.
+
 ## [1.3.2] — 2026-04-09
 
 ### Fixed
