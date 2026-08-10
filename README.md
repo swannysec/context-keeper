@@ -176,10 +176,12 @@ ConKeeper automatically preserves your memory before context window compaction. 
 
 | Context % | Action |
 |-----------|--------|
-| < 60% | Normal operation |
-| >= 60% | Auto memory-sync (no approval needed, fires once) |
-| >= 80% | Hard block — requires manual `/memory-sync` before continuing |
-| >= 90% | Claude's auto-compaction fires; PreCompact hook warns if unsaved |
+| < 85% | Normal operation |
+| >= 85% | Auto memory-sync (no approval needed, fires once) |
+| >= 95% | Hard block — requires manual `/memory-sync` before continuing |
+| ~100% | Claude's auto-compaction fires; PreCompact hook warns if unsaved |
+
+> Context percentage is measured against the model's real context window, auto-detected from the running model (every current non-Haiku model is 1M; Haiku is 200K). Nothing fires below 85% real usage.
 
 ### Context Brackets
 
@@ -187,10 +189,9 @@ In addition to the sync/block actions above, context brackets inject graduated b
 
 | Bracket | Default Range | Behavior |
 |---------|--------------|----------|
-| FRESH | 0–39% | No injection |
-| MODERATE | 40–59% | Re-read requirements before architectural decisions; consider sub-agents for 3+ step tasks |
-| DEPLETED | 60–79% | Checkpoint progress before multi-step work; limit output; warn on complex new tasks |
-| CRITICAL | 80%+ | No new multi-step work; no corner-cutting; checkpoint frequently; minimize output |
+| (silent) | 0–84% | No injection |
+| WARN | 85–94% | Tell the user context is filling up; suggest wrapping up, running `/memory-sync`, and capturing a handoff before starting large new work |
+| CRITICAL | 95%+ | Keep responses brief; no new multi-step work; no corner-cutting; run `/memory-sync` + handoff and advise `/clear` |
 
 Brackets fire on every prompt (even after sync/block flags are set), ensuring the agent always receives behavioral guidance at high context usage.
 
@@ -220,7 +221,7 @@ For the full escalation sequence, add to your shell profile (`.zshrc`, `.bashrc`
 export CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=90
 ```
 
-This pushes Claude's built-in compaction to 90%, giving ConKeeper's hooks room at 60% and 80%.
+This pushes Claude's built-in compaction later, giving ConKeeper's hooks room to act at 85% (warn/sync) and 95% (block).
 
 ### Configuration
 
@@ -233,17 +234,16 @@ auto_load: true               # Auto-load memory at session start (default: true
 output_style: normal          # quiet | normal | explanatory (default: normal)
 token_budget: standard        # economy | light | standard | detailed (default: standard)
 staleness_commits: 5          # Commits before memory file is considered stale (default: 5)
-auto_sync_threshold: 60       # When to auto-sync (default: 60)
-hard_block_threshold: 80      # When to block until manual sync (default: 80)
-# context_window_tokens: 200000 # Override auto-detection (auto-detects from model)
+auto_sync_threshold: 85       # When to auto-sync (default: 85)
+hard_block_threshold: 95      # When to block until manual sync (default: 95)
+# context_window_tokens: 1000000 # Override auto-detection (auto-detects from running model: 1M, or 200K for Haiku)
 observation_hook: true        # Enable/disable PostToolUse observation logging (default: true)
 observation_detail: full      # full | stubs_only | off (default: full)
 correction_sensitivity: low   # low | medium — correction detection sensitivity (default: low)
 auto_reflect: true            # Auto-trigger /memory-reflect after /memory-sync (default: true)
 context_brackets: true        # Enable/disable context brackets (default: true)
-bracket_fresh: 40             # Upper bound of FRESH bracket (default: 40)
-bracket_moderate: 60          # Upper bound of MODERATE bracket (default: 60)
-bracket_depleted: 80          # Upper bound of DEPLETED bracket (default: 80)
+bracket_warn: 85              # Context % where the WARN bracket starts (default: 85)
+bracket_critical: 95          # Context % where the CRITICAL bracket starts (default: 95)
 auto_clear: false             # Enable lifecycle automation (default: false)
 auto_clear_pct: 90            # Threshold for handoff generation (default: 90)
 handoff_ttl: 3600             # Handoff expiry in seconds (default: 3600)

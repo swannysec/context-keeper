@@ -80,9 +80,9 @@ fi
 # --- Read configuration ---
 
 # Defaults
-auto_sync_threshold=60
-hard_block_threshold=80
-context_window_tokens=200000  # Default; overridden by .memory-config.md or auto-detected from model
+auto_sync_threshold=85
+hard_block_threshold=95
+context_window_tokens=1000000  # Default; overridden by .memory-config.md or auto-detected from model
 correction_sensitivity=low
 
 config_had_explicit_window=false
@@ -102,11 +102,10 @@ if extract_frontmatter "$config_file"; then
         config_had_explicit_window=true
     fi
     correction_sensitivity=$(parse_yaml_str "correction_sensitivity" "low")
-    # Context bracket settings
+    # Context bracket settings (two-tier: WARN then CRITICAL)
     context_brackets=$(parse_yaml_str "context_brackets" "true")
-    bracket_fresh=$(parse_yaml_int "bracket_fresh" "40")
-    bracket_moderate=$(parse_yaml_int "bracket_moderate" "60")
-    bracket_depleted=$(parse_yaml_int "bracket_depleted" "80")
+    bracket_warn=$(parse_yaml_int "bracket_warn" "85")
+    bracket_critical=$(parse_yaml_int "bracket_critical" "95")
     # Lifecycle automation settings
     auto_clear=$(parse_yaml_str "auto_clear" "false")
     auto_clear_pct=$(parse_yaml_int "auto_clear_pct" "90")
@@ -115,16 +114,15 @@ fi
 
 # Context bracket defaults (if no config file or no frontmatter)
 : "${context_brackets:=true}"
-: "${bracket_fresh:=40}"
-: "${bracket_moderate:=60}"
-: "${bracket_depleted:=80}"
+: "${bracket_warn:=85}"
+: "${bracket_critical:=95}"
 : "${auto_clear:=false}"
 : "${auto_clear_pct:=90}"
 : "${handoff_ttl:=3600}"
 
-# Config validation: bracket thresholds must be monotonically increasing
-if [ "$bracket_fresh" -ge "$bracket_moderate" ] || [ "$bracket_moderate" -ge "$bracket_depleted" ]; then
-    bracket_fresh=40; bracket_moderate=60; bracket_depleted=80
+# Config validation: warn threshold must be below critical threshold
+if [ "$bracket_warn" -ge "$bracket_critical" ]; then
+    bracket_warn=85; bracket_critical=95
 fi
 
 # Config validation: auto_clear_pct must exceed auto_sync_threshold
@@ -133,30 +131,40 @@ if [ "$auto_clear" = "true" ] && [ "$auto_clear_pct" -le "$auto_sync_threshold" 
     auto_clear_pct=$((auto_sync_threshold + 5))
 fi
 
-# --- Auto-detect context window from settings ---
+# --- Auto-detect context window from the running model ---
 # Priority: 1) .memory-config.md explicit override (already handled above)
-#           2) Model window from settings.json, capped by CLAUDE_CODE_AUTO_COMPACT_WINDOW
-#           3) Default 200K (already set)
+#           2) Model tier (transcript model, else settings.json), capped by CLAUDE_CODE_AUTO_COMPACT_WINDOW
+#           3) Default 1M (already set)
 
 settings_file="$HOME/.claude/settings.json"
-if [[ "$config_had_explicit_window" != "true" ]] && [[ -f "$settings_file" ]] && [[ ! -L "$settings_file" ]]; then
-    # Resolve model-based context window
-    model_value=$(jq -r '.model // empty' "$settings_file" 2>/dev/null) || model_value=""
-    if [[ -n "$model_value" ]]; then
-        case "$model_value" in
-            'opus[1m]'|'sonnet[1m]') context_window_tokens=1000000 ;;
-            claude-opus-4-*|claude-sonnet-4-*) context_window_tokens=200000 ;;
-            claude-haiku-*) context_window_tokens=200000 ;;
-            # Unknown models keep the 200K default
-        esac
+if [[ "$config_had_explicit_window" != "true" ]]; then
+    # Resolve the running model. Prefer the transcript's most recent assistant
+    # message model (the model actually in use this turn) over settings.json,
+    # which only records the saved default and can be stale or mid-session-changed.
+    model_value=$(tail -n 100 "$transcript_path" 2>/dev/null \
+        | jq -r 'select(.type == "assistant" and (.message.model // "") != "") | .message.model' 2>/dev/null \
+        | tail -n 1) || model_value=""
+    if [[ -z "$model_value" ]] && [[ -f "$settings_file" ]] && [[ ! -L "$settings_file" ]]; then
+        model_value=$(jq -r '.model // empty' "$settings_file" 2>/dev/null) || model_value=""
     fi
 
+    # Window by model tier. Every current non-Haiku model is 1M; Haiku is 200K.
+    # Unknown/future models default to 1M — the safe direction, since a too-large
+    # window under-reports pressure (Claude Code's own auto-compaction is the real
+    # backstop) whereas a too-small window produces false pressure.
+    case "$model_value" in
+        *haiku*) context_window_tokens=200000 ;;
+        *)       context_window_tokens=1000000 ;;
+    esac
+
     # Apply compaction window cap: if CLAUDE_CODE_AUTO_COMPACT_WINDOW is set
-    # and lower than the model window, use it (it's the actual compaction trigger)
-    compact_window=$(jq -r '.env.CLAUDE_CODE_AUTO_COMPACT_WINDOW // empty' "$settings_file" 2>/dev/null) || compact_window=""
-    if [[ -n "$compact_window" ]] && [[ "$compact_window" =~ ^[0-9]+$ ]]; then
-        if [[ "$compact_window" -lt "$context_window_tokens" ]]; then
-            context_window_tokens=$compact_window
+    # and lower than the model window, use it (it's the actual compaction trigger).
+    if [[ -f "$settings_file" ]] && [[ ! -L "$settings_file" ]]; then
+        compact_window=$(jq -r '.env.CLAUDE_CODE_AUTO_COMPACT_WINDOW // empty' "$settings_file" 2>/dev/null) || compact_window=""
+        if [[ -n "$compact_window" ]] && [[ "$compact_window" =~ ^[0-9]+$ ]]; then
+            if [[ "$compact_window" -lt "$context_window_tokens" ]]; then
+                context_window_tokens=$compact_window
+            fi
         fi
     fi
 fi
@@ -314,14 +322,12 @@ json_encode() {
 get_bracket_directive() {
     local pct="$1"
     if [ "$context_brackets" != "true" ]; then return; fi
-    if [ "$pct" -lt "$bracket_fresh" ]; then
-        return  # FRESH: no injection
-    elif [ "$pct" -lt "$bracket_moderate" ]; then
-        printf '[MODERATE] Context at %s%%. BEFORE any architectural decision, re-read the original requirements. For tasks exceeding 3 steps, consider using sub-agents.' "$pct"
-    elif [ "$pct" -lt "$bracket_depleted" ]; then
-        printf '[DEPLETED] Context at %s%%. BEFORE any multi-step operation, checkpoint progress. Limit responses to essential content. If a complex new task is requested, warn that context is at %s%% and recommend a handoff first.' "$pct" "$pct"
+    if [ "$pct" -lt "$bracket_warn" ]; then
+        return  # silent: no injection below the warn threshold
+    elif [ "$pct" -lt "$bracket_critical" ]; then
+        printf '[WARN] Context at %s%%. Tell the user context is filling up and suggest wrapping up soon — run /memory-sync and capture a handoff before starting any large new work.' "$pct"
     else
-        printf '[CRITICAL] Context at %s%%. You MUST NOT cut corners, skip verification, or fabricate results. Do not begin new multi-step work. Checkpoint frequently. If advised to /clear but session continues: minimize output, do not accept complex new tasks.' "$pct"
+        printf '[CRITICAL] Context at %s%%. Keep responses brief and do not begin new multi-step work. You MUST NOT cut corners, skip verification, or fabricate results. Run /memory-sync, capture a handoff, and advise the user to /clear.' "$pct"
     fi
 }
 
