@@ -1,5 +1,10 @@
 # ConKeeper for Claude Code
 
+## Memory roots
+
+New projects use `.ai/memory/`; existing legacy-only projects keep `.claude/memory/`. Global memory resolves independently between `~/.ai/memory/` and `~/.claude/memory/`. Both roots means prefer `.ai`, warn, and never merge. Paths shown below are new-project examples; substitute the selected legacy root when applicable. Use `bash <conkeeper-path>/tools/memory-root.sh` (or `--global`) to resolve without creating directories. All workflows use that root for settings, sessions, queues, decisions and handoffs. `AGENTS.md` is primary; the installer can also add the same instructions to `CLAUDE.md` as a compatibility fallback, preserving existing instructions.
+
+
 Claude Code is the primary and fully-tested platform for ConKeeper.
 
 ## Status: ✅ Fully Tested
@@ -61,11 +66,11 @@ Or ask: "Create a session handoff"
 
 ## Memory Location
 
-`.claude/memory/` (configurable)
+`.ai/memory/` (new-project default; legacy-only projects retain `.claude/memory/`)
 
 ## Configuration
 
-ConKeeper reads configuration from `.claude/memory/.memory-config.md`:
+ConKeeper reads configuration from `.ai/memory/.memory-config.md`:
 
 ```yaml
 ---
@@ -96,7 +101,7 @@ Test installation:
 
 ### Memory not loading
 - Run `/memory-init` first
-- Verify `.claude/memory/` exists
+- Verify `.ai/memory/` exists
 - Check file permissions
 
 ## Resources

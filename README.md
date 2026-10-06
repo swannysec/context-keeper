@@ -4,16 +4,20 @@ A file-based agent memory system for AI coding assistants that provides structur
 
 **Multi-Platform Support:** ConKeeper works with Claude Code, GitHub Copilot, OpenAI Codex, Cursor, Windsurf, and Zed.
 
+## Memory roots
+
+New projects use `.ai/memory/`; existing legacy-only projects keep `.claude/memory/`. Global memory resolves independently between `~/.ai/memory/` and `~/.claude/memory/`. Both roots means prefer `.ai`, warn, and never merge. Paths shown below are new-project examples; substitute the selected legacy root when applicable. Use `bash <conkeeper-path>/tools/memory-root.sh` (or `--global`) to resolve without creating directories. All workflows use that root for settings, sessions, queues, decisions and handoffs. `AGENTS.md` is primary; the installer can also add the same instructions to `CLAUDE.md` as a compatibility fallback, preserving existing instructions.
+
 ## vNext planning
 
-The [vNext specifications and compatibility-first plan](docs/vnext/overview.md) describe intended portable memory roots and optional Knowledge Workspaces. They are planning documents; the current release behavior below remains unchanged. [Phase 1 characterization](docs/vnext/phase-1-characterization.md) records regression coverage and the remaining compatibility gates.
+The [vNext specifications and compatibility-first plan](docs/vnext/overview.md) describe intended portable memory roots and optional Knowledge Workspaces. Fixed root selection is implemented in Phase 2; the knowledge and later-phase specifications remain planned. [Phase 1 characterization](docs/vnext/phase-1-characterization.md) records regression coverage and the remaining compatibility gates.
 
 ## Overview
 
 ConKeeper replaces database-backed context management with simple, version-controllable Markdown files. It provides:
 
-- **Global memory** (`~/.claude/memory/`) - Cross-project preferences and patterns
-- **Project memory** (`<project>/.claude/memory/`) - Project-specific context, decisions, and progress
+- **Global memory** (`~/.ai/memory/`) - Cross-project preferences and patterns
+- **Project memory** (`<project>/.ai/memory/`) - Project-specific context, decisions, and progress
 - **SessionStart hook** - Automatic memory awareness at session start
 - **Context preservation hooks** - Automatic memory-sync before context compaction
 - **Skills + commands** - Easy memory initialization, sync, and session handoff
@@ -39,8 +43,7 @@ Add the marketplace and install the plugin:
 # Install the plugin
 /plugin install context-keeper@swannysec-plugins
 
-# Create global memory directory
-mkdir -p ~/.claude/memory
+
 ```
 
 > **Note:** Using the full HTTPS URL avoids [SSH authentication issues](https://github.com/anthropics/claude-code/issues/14485) with the `github` source type.
@@ -64,7 +67,8 @@ mkdir -p ~/.claude/memory
 
 3. Create global memory directory:
    ```bash
-   mkdir -p ~/.claude/memory
+   # Use the selected global root described above
+   mkdir -p "$(bash /path/to/context-keeper/tools/memory-root.sh --global)"
    ```
 
 ## Multi-Platform Support
@@ -92,7 +96,7 @@ Add this snippet to your project's AGENTS.md:
 
 This project uses ConKeeper for persistent AI context management.
 
-**Memory Location:** `.claude/memory/` (or `.ai/memory/`)
+**Memory Location:** Use existing `.ai/memory/`, otherwise existing `.claude/memory/`, otherwise `.ai/memory/` for initialization. Apply the same rule independently under the home directory for global memory. If both roots exist, use `.ai`, warn, and leave legacy files untouched.
 
 **Available Workflows:**
 - **memory-init** - Initialize memory for this project
@@ -152,12 +156,12 @@ See [docs/platform-guides/](docs/platform-guides/) for detailed platform instruc
 ### Memory Structure
 
 ```
-~/.claude/memory/                    # Global (cross-project)
+~/.ai/memory/                    # Global (cross-project)
 ├── preferences.md                   # Tool/workflow preferences
 ├── patterns.md                      # Reusable patterns
 └── glossary.md                      # Personal terminology
 
-<project>/.claude/memory/            # Project-specific
+<project>/.ai/memory/            # Project-specific
 ├── product-context.md               # Project overview, architecture
 ├── active-context.md                # Current focus, recent decisions
 ├── progress.md                      # Task tracking
@@ -215,7 +219,7 @@ When enabled, auto-clear generates a handoff file at high context usage and advi
 5. Handoff requires sync to complete first — won't fire if sync hasn't run
 6. Disabled by default — opt-in via `auto_clear: true`
 
-The handoff file format (`.claude/memory/.handoffs/`) is designed as an extension point for future wrapper scripts or API changes.
+The handoff file format (`.ai/memory/.handoffs/`) is designed as an extension point for future wrapper scripts or API changes.
 
 ### Recommended Setup
 
@@ -229,7 +233,7 @@ This pushes Claude's built-in compaction later, giving ConKeeper's hooks room to
 
 ### Configuration
 
-Thresholds are configurable per-project in `.claude/memory/.memory-config.md`:
+Thresholds are configurable per-project in `.ai/memory/.memory-config.md`:
 
 ```yaml
 ---
@@ -273,7 +277,7 @@ The context preservation hooks require `jq` and `bc`. Install via your package m
 Memory files may contain project context that influences AI assistant behavior. For security guidance, see [SECURITY.md](SECURITY.md).
 
 Key recommendations:
-- Add `.claude/memory/` to `.gitignore` for shared repositories
+- Add `.ai/memory/` to `.gitignore` for shared repositories
 - Review memory files when working on untrusted codebases
 - See SECURITY.md for prompt injection awareness
 

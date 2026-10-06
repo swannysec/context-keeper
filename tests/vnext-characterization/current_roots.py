@@ -1,4 +1,4 @@
-"""Characterization, not the intended vNext resolution acceptance tests.
+"""Regression coverage seeded by Phase 1; root expectations updated for Phase 2.
 
 All hooks execute with Bash 3.2 on macOS. HOME and TMPDIR are replaced only
 in child-process environments; fixtures never use developer/native memory.
@@ -62,8 +62,7 @@ class CurrentRoots(unittest.TestCase):
         return result.stdout
 
     def test_project_and_global_roots_independently(self):
-        # Current behavior: neither/new-only => unavailable; legacy/both => legacy.
-        # Explicit root configuration does not exist yet, so it is not fabricated here.
+        # Fixed-root matrix: new first, legacy fallback, new target when absent.
         for scope_name in ('project', 'global'):
             for new, legacy in ((False, False), (True, False), (False, True), (True, True)):
                 with self.subTest(scope=scope_name, new=new, legacy=legacy):
@@ -75,26 +74,28 @@ class CurrentRoots(unittest.TestCase):
                         self.memory(scope, '.ai', 'NEWROOTMARKER')
                     if legacy:
                         self.memory(scope, '.claude', 'LEGACYROOTMARKER')
-                    before = snapshot(scope / '.ai') if new else {}
+                    before = snapshot(scope / '.claude') if legacy else {}
                     context = self.start()
-                    expected = 'Project memory: .claude/memory' if scope_name == 'project' else 'Global memory: $HOME/.claude/memory'
-                    self.assertEqual(expected in context, legacy)
+                    selected = scope / ('.ai/memory' if new or not legacy else '.claude/memory')
+                    expected = ('Project memory: ' if scope_name == 'project' else 'Global memory: ') + str(selected)
+                    self.assertEqual(expected in context, new or legacy)
                     output = self.search('ROOTMARKER', *(['--global'] if scope_name == 'global' else []))
-                    self.assertEqual('LEGACYROOTMARKER' in output, legacy)
-                    self.assertNotIn('NEWROOTMARKER', output)
-                    self.assertEqual(snapshot(scope / '.ai') if new else {}, before)
+                    self.assertEqual('LEGACYROOTMARKER' in output, legacy and not new)
+                    self.assertEqual('NEWROOTMARKER' in output, new)
+                    if legacy and new or scope_name == 'global':
+                        self.assertEqual(snapshot(scope / '.claude') if legacy else {}, before)
                     self.assertEqual((scope / '.ai').exists(), new)
                     self.assertEqual((scope / '.claude').exists(), legacy)
-                    if scope_name == 'project' and legacy:
-                        self.assertTrue((scope / '.claude/memory/.last-sync').is_file())
-                        self.assertTrue(list((scope / '.claude/memory/sessions').glob('*-observations.md')))
+                    if scope_name == 'project' and (new or legacy):
+                        self.assertTrue((selected / '.last-sync').is_file())
+                        self.assertTrue(list((selected / 'sessions').glob('*-observations.md')))
 
     def test_mixed_scopes(self):
         self.memory(self.project, '.ai', 'PROJECTNEWROOTMARKER')
         self.memory(self.home, '.claude', 'GLOBALLEGACYROOTMARKER')
         context = self.start()
-        self.assertIn('Project memory: not configured', context)
-        self.assertIn('Global memory: $HOME/.claude/memory', context)
+        self.assertIn('Project memory: ' + str(self.project / '.ai/memory'), context)
+        self.assertIn('Global memory: ' + str(self.home / '.claude/memory'), context)
         self.assertIn('GLOBALLEGACYROOTMARKER', self.search('ROOTMARKER', '--global'))
         self.assertFalse((self.project / '.claude').exists())
 
@@ -111,9 +112,9 @@ class CurrentRoots(unittest.TestCase):
         self.assertFalse((memory / '.last-sync').exists())
 
     def test_config_bootstrap_and_symlink_refusal(self):
-        memory = self.memory(self.project, '.claude', 'LEGACYROOTMARKER')
+        memory = self.memory(self.project, '.ai', 'LEGACYROOTMARKER')
         self.write(memory / 'friction.md', 'FRICTIONMARKER\n')
-        self.write(self.project / '.ai/memory/.memory-config.md', '---\ntoken_budget: economy\n---\n')
+        self.write(self.project / '.claude/memory/.memory-config.md', '---\ntoken_budget: economy\n---\n')
         self.assertIn('FRICTIONMARKER', self.start())
         config = self.write(memory / '.memory-config.md', '---\ntoken_budget: economy # inline comment\n---\n')
         self.assertNotIn('FRICTIONMARKER', self.start())
@@ -165,17 +166,19 @@ class CurrentRoots(unittest.TestCase):
         (self.project / '.claude').mkdir()
         (self.project / '.claude/memory').symlink_to(outside, target_is_directory=True)
         before = snapshot(outside)
-        self.assertIn('memory-system-available', self.start())
+        result = self.run_script('hooks/session-start.sh')
+        self.assertEqual(result.returncode, 0)
+        self.assertIn('escapes', result.stderr)
         self.assertEqual(snapshot(outside), before)
 
-    def test_session_start_sessions_symlink_gap(self):
-        # Known gap: session-start checks the file, not its sessions parent.
+    def test_session_start_sessions_symlink_refusal(self):
+        # SessionStart and PostToolUse both refuse a symlinked sessions parent.
         memory = self.memory(self.project, '.claude', 'LEGACYROOTMARKER')
         outside = self.base / 'outside-sessions'
         outside.mkdir()
         (memory / 'sessions').symlink_to(outside, target_is_directory=True)
         self.start()
-        self.assertEqual(len(list(outside.glob('*-observations.md'))), 1)
+        self.assertEqual(list(outside.iterdir()), [])
         before = snapshot(outside)
         payload = json.dumps({'cwd': str(self.project), 'session_id': 'phase1',
                               'tool_name': 'Read', 'tool_input': {'file_path': 'README.md'}})
@@ -191,12 +194,12 @@ class CurrentRoots(unittest.TestCase):
         self.memory(parent / 'both', '.claude', 'BOTHLEGACYROOTMARKER')
         self.memory(parent / 'both', '.ai', 'BOTHNEWROOTMARKER')
         self.memory(parent / 'nested/deep', '.claude', 'DEEPROOTMARKER')
-        config = self.write(memory / '.memory-config.md', '---\nproject_search_paths: [' + json.dumps(str(parent)) + ']\n---\n')
+        config = self.write(memory / '.memory-config.md', '---\nproject_search_paths: [' + json.dumps(str(parent)) + ', ' + json.dumps(str(parent)) + ']\n---\n')
         before = snapshot(parent)
         output = self.search('ROOTMARKER', '--cross-project')
-        for marker in ('CURRENTROOTMARKER', 'OTHERLEGACYROOTMARKER', 'BOTHLEGACYROOTMARKER'):
+        for marker in ('CURRENTROOTMARKER', 'OTHERLEGACYROOTMARKER', 'BOTHNEWROOTMARKER', 'OTHERNEWROOTMARKER'):
             self.assertEqual(output.count(marker), 1)
-        for marker in ('OTHERNEWROOTMARKER', 'BOTHNEWROOTMARKER', 'DEEPROOTMARKER'):
+        for marker in ('BOTHLEGACYROOTMARKER', 'DEEPROOTMARKER'):
             self.assertNotIn(marker, output)
         self.assertEqual(snapshot(parent), before)
         config.write_text('---\nproject_search_paths: disabled\n---\n')
@@ -206,25 +209,26 @@ class CurrentRoots(unittest.TestCase):
         agents = self.write(self.project / 'AGENTS.md', '# Existing instructions\nKEEP-AGENTS\n')
         claude = self.write(self.project / 'CLAUDE.md', '# Native fallback\nKEEP-CLAUDE\n')
         self.write(self.project / 'README.md', '# Fixture\n')
-        result = self.run_script('tools/install.sh', payload='1\ny\n')
+        result = self.run_script('tools/install.sh', payload='1\ny\ny\n')
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertTrue(agents.read_text().startswith('# Existing instructions\nKEEP-AGENTS\n'))
         first = agents.read_bytes()
         result = self.run_script('tools/install.sh', payload='1\n')
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(agents.read_bytes(), first)
-        self.assertEqual(claude.read_text(), '# Native fallback\nKEEP-CLAUDE\n')
+        self.assertTrue(claude.read_text().startswith('# Native fallback\nKEEP-CLAUDE\n'))
+        self.assertIn('ConKeeper Memory System', claude.read_text())
         self.assertFalse((self.project / '.claude').exists())
 
     def test_codex_installer_current_skill_selection(self):
-        # Current installer omits memory-search and uses the legacy adapter path.
+        # Native placement is unchanged in Phase 2; all supplied skills are copied.
         self.write(self.project / 'README.md', '# Fixture\n')
         result = self.run_script('tools/install.sh', payload='3\n')
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         target = self.project / '.codex/skills'
         self.assertEqual(sorted(p.name for p in target.iterdir()),
-                         ['memory-init', 'memory-sync', 'session-handoff'])
-        for name in ('memory-init', 'memory-sync', 'session-handoff'):
+                         ['memory-init', 'memory-search', 'memory-sync', 'session-handoff'])
+        for name in ('memory-init', 'memory-search', 'memory-sync', 'session-handoff'):
             self.assertEqual((target / name / 'SKILL.md').read_bytes(),
                              (REPO / 'platforms/codex/.codex/skills' / name / 'SKILL.md').read_bytes())
         self.assertFalse((self.project / '.agents').exists())
@@ -232,13 +236,14 @@ class CurrentRoots(unittest.TestCase):
     def test_installer_claude_only_project_creates_agents(self):
         self.write(self.project / 'README.md', '# Fixture\n')
         claude = self.write(self.project / 'CLAUDE.md', '# Legacy instructions\nKEEP-CLAUDE\n')
-        result = self.run_script('tools/install.sh', payload='1\ny\n')
+        result = self.run_script('tools/install.sh', payload='1\ny\ny\n')
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn('ConKeeper Memory System', (self.project / 'AGENTS.md').read_text())
-        self.assertEqual(claude.read_text(), '# Legacy instructions\nKEEP-CLAUDE\n')
+        self.assertTrue(claude.read_text().startswith('# Legacy instructions\nKEEP-CLAUDE\n'))
+        self.assertIn('ConKeeper Memory System', claude.read_text())
         self.assertFalse((self.project / '.claude').exists())
 
-    def test_build_package_inventory_and_search_dependency_gap(self):
+    def test_build_package_inventory_and_search_dependencies(self):
         source = self.base / 'build-source'
         source.mkdir()
         for directory in ('tools', 'platforms', 'core', 'skills', 'commands', 'hooks'):
@@ -253,14 +258,19 @@ class CurrentRoots(unittest.TestCase):
         self.assertEqual(sorted(p.name for p in dist.iterdir()),
                          ['claude-code', 'codex', 'copilot', 'cursor',
                           'universal', 'windsurf', 'zed'])
+        self.memory(self.project, '.ai', 'PACKAGEDROOTMARKER')
         for package, directory, count in (
                 ('claude-code', 'skills', 7), ('codex', '.codex/skills', 4),
                 ('copilot', '.github/skills', 4), ('cursor', '.cursor/skills', 4)):
             self.assertEqual(len(list((dist / package / directory).rglob('SKILL.md'))), count)
             self.assertIn('tools/memory-search.sh',
                           (dist / package / directory / 'memory-search/SKILL.md').read_text())
-            # Known packaging gap; do not mistake a successful build for a usable workflow.
-            self.assertFalse((dist / package / 'tools/memory-search.sh').exists())
+            # Packages must include the referenced executable and its libraries.
+            self.assertTrue((dist / package / 'tools/memory-search.sh').exists())
+            result = subprocess.run(['/bin/bash', str(dist / package / 'tools/memory-search.sh'), 'PACKAGEDROOTMARKER'],
+                                    cwd=self.project, env=self.env, capture_output=True, text=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn('PACKAGEDROOTMARKER', result.stdout)
         self.assertTrue((dist / 'universal/core/workflows/memory-init.md').is_file())
 
 

@@ -1,28 +1,26 @@
 # Compatibility contract
 
-Status: intended vNext behavior. Current hardcoded legacy paths are described in [current behavior](current-behavior.md).
+Status: Phase 2 fixed-root contract. The v1.4 baseline is described in [current behavior](current-behavior.md).
 
 Project and global roots resolve independently in this order:
 
-1. Explicit configured memory root.
-2. Existing `.ai/memory/` (global: `~/.ai/memory/`).
-3. Existing `.claude/memory/` (global: `~/.claude/memory/`).
-4. Otherwise select `.ai/memory/`; create it only during an authorized initialization/write operation.
+1. Existing `.ai/memory/` (global: `~/.ai/memory/`).
+2. Existing `.claude/memory/` (global: `~/.claude/memory/`).
+3. Otherwise select `.ai/memory/`; create it only during an authorized initialization/write operation.
 
-Read-only resolution/diagnostics must not create directories. Explicit configuration is authoritative even if the directory does not yet exist; invalid, inaccessible or unsafe configured roots produce a clear diagnostic rather than silently falling back. The exact configuration channel and relative-path anchoring need Phase 2 review: configuration cannot exist only inside the root it is needed to select. Retain existing per-root `.memory-config.md` for feature settings after resolution.
+Read-only resolution/diagnostics must not create directories. Invalid, inaccessible or unsafe selected roots produce a clear diagnostic rather than silently falling back. Retain existing per-root `.memory-config.md` for feature settings after resolution. Custom roots and new root-configuration channels are out of scope, per the user's scope correction on 2026-10-06; any future addition requires review and approval.
 
 ## Resolution acceptance matrix
 
-| Explicit root | New exists | Legacy exists | Selected root | Required behavior |
-|---|---|---|---|---|
-| valid | any | any | explicit | Show configured choice; no implicit migration |
-| absent | yes | no | new | No legacy directory creation |
-| absent | no | yes | legacy | Existing projects require zero changes |
-| absent | yes | yes | new | Surface ambiguity; never merge or delete legacy |
-| absent | no | no | new target | Read-only: report absent; init: create |
-| invalid/unsafe | any | any | none | Diagnose; do not hide error with fallback |
+| New exists | Legacy exists | Selected root | Required behavior |
+|---|---|---|---|
+| yes | no | new | No legacy directory creation |
+| no | yes | legacy | Existing projects require zero changes |
+| yes | yes | new | Surface ambiguity; never merge or delete legacy |
+| no | no | new target | Read-only: report absent; init: create |
+| selected path invalid/unsafe | any | none | Diagnose; do not hide error with fallback |
 
-Apply the matrix independently to user and project scopes, including mixed legacy/new projects under configured cross-project search roots. Both directories must still be diagnosed if an explicit root selects one; report selection and ambiguity without changing either.
+Apply the matrix independently to user and project scopes, including mixed legacy/new projects under configured cross-project search parents. Run from the project root, as in the existing workflows; JSON hook `cwd` supplies that scope when present. Global selection is anchored to the user's home directory. Selection does not change either root.
 
 All readers/writers must use the same selected root: init, sync, search, config, reflection, insights, observations, correction queues, last-sync, ADR indexes and handoffs. Keep token budgets, privacy exclusions, category tags, graceful degradation and existing session semantics intact. No automatic content rewrite, filename rename or host-native memory migration.
 

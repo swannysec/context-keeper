@@ -1,5 +1,12 @@
 # ConKeeper: Session Handoff
 
+## Memory root selection
+
+Resolve memory once per workflow, independently for project and global scopes: use existing `.ai/memory`, otherwise existing `.claude/memory`, otherwise select `.ai/memory` for authorized initialization. If both exist, use `.ai`, warn, and leave legacy memory untouched. Do not migrate or merge automatically.
+
+When shell access is available, set `MEMORY_ROOT` with `bash "<conkeeper-path>/tools/memory-root.sh"` and `GLOBAL_MEMORY_ROOT` with the same command plus `--global`, checking for errors before continuing. Otherwise apply the same fixed rules with file tools. Run from the project root; global paths are relative to the user's home. All paths below use the selected root, including config, queues, observations, decisions, sync markers and handoffs. Read-only operations must not create directories. Preserve private content and refuse writes through symlinked memory subdirectories/files.
+
+
 Generate a complete handoff prompt for seamless continuation in a new session.
 
 ## Steps
@@ -8,7 +15,7 @@ Generate a complete handoff prompt for seamless continuation in a new session.
    Run memory-sync workflow to ensure memory is current.
 
 2. **Create Session Summary**
-   File: `.claude/memory/sessions/[YYYY-MM-DD]-[topic].md`
+   File: `$MEMORY_ROOT/sessions/[YYYY-MM-DD]-[topic].md`
    ```markdown
    # Session: [date]
    
@@ -64,7 +71,7 @@ Generate a complete handoff prompt for seamless continuation in a new session.
    - [Any unresolved issues]
    
    ## Context to Load
-   Project memory is at: .claude/memory/
+   Project memory is at: $MEMORY_ROOT/
    Key files to review: [list critical files]
    
    Please load the project memory and continue with [specific next task].

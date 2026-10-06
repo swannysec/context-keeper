@@ -1,5 +1,12 @@
 # Memory Initialization Workflow
 
+## Memory root selection
+
+Resolve memory once per workflow, independently for project and global scopes: use existing `.ai/memory`, otherwise existing `.claude/memory`, otherwise select `.ai/memory` for authorized initialization. If both exist, use `.ai`, warn, and leave legacy memory untouched. Do not migrate or merge automatically.
+
+When shell access is available, set `MEMORY_ROOT` with `bash "<conkeeper-path>/tools/memory-root.sh"` and `GLOBAL_MEMORY_ROOT` with the same command plus `--global`, checking for errors before continuing. Otherwise apply the same fixed rules with file tools. Run from the project root; global paths are relative to the user's home. All paths below use the selected root, including config, queues, observations, decisions, sync markers and handoffs. Read-only operations must not create directories. Preserve private content and refuse writes through symlinked memory subdirectories/files.
+
+
 **Purpose:** Initialize the ConKeeper memory system for a project.
 
 ## Prerequisites
@@ -11,9 +18,7 @@
 
 ### 1. Pre-flight Checks
 
-Check if memory already exists:
-- Look for `.claude/memory/` directory
-- Look for `.ai/memory/` directory (future standard)
+Check whether the selected `$MEMORY_ROOT` exists.
 
 If memory exists:
 - Ask user: "Memory already exists. Would you like to reset it or review current state?"
@@ -24,16 +29,9 @@ If memory exists:
 
 Create the following directories:
 ```
-.claude/memory/
-.claude/memory/decisions/
-.claude/memory/sessions/
-```
-
-Alternative for cross-platform projects:
-```
-.ai/memory/
-.ai/memory/decisions/
-.ai/memory/sessions/
+$MEMORY_ROOT/
+$MEMORY_ROOT/decisions/
+$MEMORY_ROOT/sessions/
 ```
 
 ### 3. Gather Project Context
@@ -63,7 +61,7 @@ Ask user about memory verbosity preference:
 > - **Standard** (~4000 tokens): Balanced for most projects (default)
 > - **Detailed** (~6000 tokens): Comprehensive context, rich handoffs
 
-Create `.claude/memory/.memory-config.md` with their choice:
+Create `$MEMORY_ROOT/.memory-config.md` with their choice:
 ```yaml
 ---
 token_budget: standard
@@ -82,7 +80,8 @@ Ask user about version control preference:
 If not tracking:
 ```bash
 # Add to .gitignore (idempotent)
-grep -qxF '.claude/memory/' .gitignore 2>/dev/null || echo '.claude/memory/' >> .gitignore
+memory_ignore="${MEMORY_ROOT#"$(pwd -P)/"}/"
+grep -qxF "$memory_ignore" .gitignore 2>/dev/null || echo "$memory_ignore" >> .gitignore
 ```
 
 ### 7. Confirm Completion

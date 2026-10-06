@@ -28,16 +28,21 @@ fi
 # Resolve cwd to an absolute path (security: prevents path traversal via crafted cwd)
 cwd=$(cd "$cwd" 2>/dev/null && pwd) || exit 0
 
+# Resolve the supplied project scope.
+SCRIPT_DIR_PTU="$(cd "$(dirname "$0")" && pwd)"
+. "$SCRIPT_DIR_PTU/lib-memory-root.sh"
+PROJECT_MEMORY=$(resolve_memory_root "$cwd") || exit 0
+
 # Require memory directory to exist
-[[ -d "$cwd/.claude/memory" ]] || exit 0
+[[ -d "$PROJECT_MEMORY" ]] || exit 0
 
 # --- Read configuration ---
 
 observation_hook=true
 observation_detail="full"
 
-config_file="$cwd/.claude/memory/.memory-config.md"
-if [[ -f "$config_file" ]]; then
+config_file="$PROJECT_MEMORY/.memory-config.md"
+if [[ -f "$config_file" ]] && [[ ! -L "$config_file" ]]; then
     # Extract YAML frontmatter (between first two --- lines), strip comments
     frontmatter=$(awk '/^---$/ { if (++n == 2) exit; next } n == 1 { sub(/#.*/, ""); print }' "$config_file")
     if [[ -n "$frontmatter" ]]; then
@@ -55,8 +60,9 @@ fi
 
 # --- Observation file path ---
 
-obs_dir="$cwd/.claude/memory/sessions"
+obs_dir="$PROJECT_MEMORY/sessions"
 obs_file="$obs_dir/$(date +%Y-%m-%d)-observations.md"
+memory_subdir_safe "$PROJECT_MEMORY" "$obs_dir" || exit 0
 mkdir -p "$obs_dir"
 
 # Security: refuse to write through symlinks (check both dir and file)

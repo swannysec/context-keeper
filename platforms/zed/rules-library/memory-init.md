@@ -1,13 +1,20 @@
 # ConKeeper: Memory Init
 
+## Memory root selection
+
+Resolve memory once per workflow, independently for project and global scopes: use existing `.ai/memory`, otherwise existing `.claude/memory`, otherwise select `.ai/memory` for authorized initialization. If both exist, use `.ai`, warn, and leave legacy memory untouched. Do not migrate or merge automatically.
+
+When shell access is available, set `MEMORY_ROOT` with `bash "<conkeeper-path>/tools/memory-root.sh"` and `GLOBAL_MEMORY_ROOT` with the same command plus `--global`, checking for errors before continuing. Otherwise apply the same fixed rules with file tools. Run from the project root; global paths are relative to the user's home. All paths below use the selected root, including config, queues, observations, decisions, sync markers and handoffs. Read-only operations must not create directories. Preserve private content and refuse writes through symlinked memory subdirectories/files.
+
+
 Initialize the ConKeeper file-based memory system for this project.
 
 ## Steps
 
 1. **Create Directory Structure**
    ```bash
-   mkdir -p .claude/memory/decisions
-   mkdir -p .claude/memory/sessions
+   mkdir -p "$MEMORY_ROOT/decisions"
+   mkdir -p "$MEMORY_ROOT/sessions"
    ```
 
 2. **Gather Project Context**
@@ -64,7 +71,11 @@ Initialize the ConKeeper file-based memory system for this project.
 
 6. **Git Handling**
    Ask: "Should memory be tracked in git?"
-   - If no: `grep -qxF '.claude/memory/' .gitignore 2>/dev/null || echo '.claude/memory/' >> .gitignore`
+   If no:
+   ```bash
+   memory_ignore="${MEMORY_ROOT#"$(pwd -P)/"}/"
+   grep -qxF "$memory_ignore" .gitignore 2>/dev/null || echo "$memory_ignore" >> .gitignore
+   ```
 
 7. **Confirm completion**
    > Memory initialized. Use memory-sync to update as you work.

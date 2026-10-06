@@ -124,7 +124,7 @@ install_skills() {
         mkdir -p "$target_dir"
 
         local installed=0
-        for skill in memory-init memory-sync session-handoff; do
+        for skill in memory-init memory-search memory-sync session-handoff; do
             if [ -d "${source_dir}/${skill}" ]; then
                 cp -r "${source_dir}/${skill}" "$target_dir/"
                 ((installed++))
@@ -174,14 +174,17 @@ install_windsurf() {
 # Add AGENTS.md snippet
 # Note: Small TOCTOU window exists between check and write.
 # Acceptable for interactive CLI; not suitable for concurrent execution.
-add_agents_snippet() {
+add_instruction_snippet() {
+    local instruction_file="$1"
     local snippet='
 <!-- ConKeeper Memory System -->
 ## Memory System
 
 This project uses ConKeeper for persistent AI context management.
 
-**Memory Location:** `.claude/memory/` (or `.ai/memory/`)
+**Memory Location:** Use existing `.ai/memory/`, otherwise existing `.claude/memory/`, otherwise `.ai/memory/` for initialization. Resolve project and global memory independently. If both roots exist, prefer `.ai`, warn, and never merge or migrate automatically. Keep native agent memory untouched.
+
+Use `AGENTS.md` as primary instructions; `CLAUDE.md` supplies a compatibility fallback. All memory workflows use the selected root, including configuration, queues, sessions and handoffs.
 
 **Available Workflows:**
 - **memory-init** - Initialize memory for this project
@@ -203,35 +206,40 @@ This project uses ConKeeper for persistent AI context management.
 For full documentation: https://github.com/swannysec/context-keeper
 <!-- /ConKeeper -->'
 
-    if [ -f "AGENTS.md" ]; then
-        if ! check_not_symlink "AGENTS.md" "AGENTS.md"; then
+    if [ -f "$instruction_file" ]; then
+        if ! check_not_symlink "$instruction_file" "$instruction_file"; then
             return 1
         fi
-        if grep -q "ConKeeper Memory System" AGENTS.md 2>/dev/null; then
-            echo -e "${GREEN}✓ ConKeeper already in AGENTS.md${NC}"
+        if grep -q "ConKeeper Memory System" "$instruction_file" 2>/dev/null; then
+            echo -e "${GREEN}✓ ConKeeper already in ${instruction_file}${NC}"
             return
         fi
 
-        echo -e "${YELLOW}Existing AGENTS.md found.${NC}"
+        echo -e "${YELLOW}Existing ${instruction_file} found.${NC}"
         read -p "Append ConKeeper snippet? [Y/n] " response
         if [[ ! "$response" =~ ^[Nn]$ ]]; then
-            echo "$snippet" >> AGENTS.md
-            echo -e "${GREEN}✓ ConKeeper snippet added to AGENTS.md${NC}"
+            echo "$snippet" >> "$instruction_file"
+            echo -e "${GREEN}✓ ConKeeper snippet added to ${instruction_file}${NC}"
         fi
     else
         # Check if path exists as symlink (but not regular file)
-        if [ -L "AGENTS.md" ]; then
-            echo -e "${RED}Security Error: AGENTS.md is a symlink. Refusing to modify.${NC}"
-            echo "Target: $(readlink -f "AGENTS.md" 2>/dev/null || readlink "AGENTS.md")"
+        if [ -L "$instruction_file" ]; then
+            echo -e "${RED}Security Error: ${instruction_file} is a symlink. Refusing to modify.${NC}"
+            echo "Target: $(readlink -f "$instruction_file" 2>/dev/null || readlink "$instruction_file")"
             return 1
         fi
-        read -p "Create AGENTS.md with ConKeeper snippet? [Y/n] " response
+        read -p "Create ${instruction_file} with ConKeeper snippet? [Y/n] " response
         if [[ ! "$response" =~ ^[Nn]$ ]]; then
-            echo "# AI Agent Instructions" > AGENTS.md
-            echo "$snippet" >> AGENTS.md
-            echo -e "${GREEN}✓ Created AGENTS.md with ConKeeper snippet${NC}"
+            echo "# AI Agent Instructions" > "$instruction_file"
+            echo "$snippet" >> "$instruction_file"
+            echo -e "${GREEN}✓ Created ${instruction_file} with ConKeeper snippet${NC}"
         fi
     fi
+}
+
+add_agents_snippet() {
+    add_instruction_snippet AGENTS.md
+    add_instruction_snippet CLAUDE.md
 }
 
 # Main installation flow
@@ -247,7 +255,7 @@ main() {
     
     echo ""
     echo "Available installations:"
-    echo "  1. AGENTS.md snippet (universal, all platforms)"
+    echo "  1. AGENTS.md snippet + CLAUDE.md fallback (universal)"
     echo "  2. GitHub Copilot skills (.github/skills/)"
     echo "  3. OpenAI Codex skills (.codex/skills/)"
     echo "  4. Cursor skills (.cursor/skills/)"

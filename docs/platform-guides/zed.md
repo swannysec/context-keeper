@@ -1,5 +1,10 @@
 # ConKeeper for Zed
 
+## Memory roots
+
+New projects use `.ai/memory/`; existing legacy-only projects keep `.claude/memory/`. Global memory resolves independently between `~/.ai/memory/` and `~/.claude/memory/`. Both roots means prefer `.ai`, warn, and never merge. Paths shown below are new-project examples; substitute the selected legacy root when applicable. Use `bash <conkeeper-path>/tools/memory-root.sh` (or `--global`) to resolve without creating directories. All workflows use that root for settings, sessions, queues, decisions and handoffs. `AGENTS.md` is primary; the installer can also add the same instructions to `CLAUDE.md` as a compatibility fallback, preserving existing instructions.
+
+
 Zed supports AI rules via AGENTS.md and the Rules Library.
 
 ## Status: ✅ Tested (AGENTS.md)
@@ -25,7 +30,7 @@ Add inline workflows to AGENTS.md:
 
 This project uses ConKeeper for persistent AI context management.
 
-**Memory Location:** `.claude/memory/`
+**Memory Location:** Use existing `.ai/memory/`, otherwise existing `.claude/memory/`, otherwise `.ai/memory/` for initialization. Apply the same rule independently under the home directory for global memory. If both roots exist, use `.ai`, warn, and leave legacy files untouched.
 
 **Available Workflows:**
 - **memory-init** - Initialize memory (see workflow below)
@@ -33,7 +38,7 @@ This project uses ConKeeper for persistent AI context management.
 - **session-handoff** - Generate handoff for new session
 
 ### memory-init Workflow
-1. Create `.claude/memory/decisions/` and `.claude/memory/sessions/`
+1. Create `decisions/` and `sessions/` under the selected memory root
 2. Gather project context (purpose, tech stack, current focus)
 3. Create product-context.md, active-context.md, progress.md
 4. Ask about git tracking preference
@@ -57,7 +62,7 @@ If using `.rules` instead:
 
 ```
 # ConKeeper Memory System
-Memory location: .claude/memory/
+Memory location: Use existing `.ai/memory/`, otherwise existing `.claude/memory/`, otherwise `.ai/memory/` for initialization. If both exist, use `.ai`, warn, and never merge. All workflow paths refer to the selected root.
 Workflows: memory-init, memory-sync, session-handoff
 When asked to use these workflows, create the appropriate memory files.
 ```
@@ -82,12 +87,12 @@ Import prompts into Zed's Rules Library:
 - "Create a session handoff"
 
 ### With Inline Assist
-- "Check .claude/memory/active-context.md for current focus"
+- "Check .ai/memory/active-context.md for current focus"
 - "Update progress.md with completed tasks"
 
 ## Memory Location
 
-`.claude/memory/` - Compatible with all platforms.
+`.ai/memory/` - Compatible with all platforms.
 
 ## Rules Hierarchy
 
@@ -113,7 +118,7 @@ Ensure ConKeeper is in whichever file Zed loads first.
 
 ### AI doesn't find memory
 - Memory must be initialized first
-- Check `.claude/memory/` exists
+- Check `.ai/memory/` exists
 - Verify file permissions
 
 ## Resources

@@ -8,7 +8,7 @@ The resolved project root retains familiar Markdown files: `product-context.md`,
 
 A manifest, if introduced in Phase 3, records schema version, selected root/scope, optional Knowledge Workspace path, managed files/adapters and migration provenance. It contains configuration references, never credentials or a second copy of canonical knowledge. Exact filename, encoding and field names remain an implementation decision. Old roots without a manifest must remain readable; future unsupported schema versions produce a bounded diagnostic rather than destructive conversion.
 
-Explicit root selection must be discoverable before reading in-root settings. Phase 2 chooses and documents a small configuration mechanism and anchoring rules; do not add multiple competing precedence channels by accident. Relative paths, paths with spaces, absent/unwritable roots and symlink escape policy must have tested semantics.
+Phase 2 uses only the fixed `.ai/memory` default and legacy `.claude/memory` fallback. Feature settings remain in the selected root. Custom roots and new configuration channels are out of scope unless reviewed and approved. Existing CWD/home anchoring, paths with spaces, absent/unwritable roots and symlink boundaries must retain clear semantics.
 
 Local project/global memory retains the user's tracking/privacy choice. This repository's local memory is ignored. Engineering specifications are tracked here; personal memory is not automatically added to Git. Export tooling must use a reviewed allowlist and privacy checks rather than relying only on `.gitignore`.
 

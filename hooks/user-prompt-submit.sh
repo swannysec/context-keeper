@@ -90,9 +90,11 @@ config_had_explicit_window=false
 # Source shared config library
 SCRIPT_DIR_UPS="$(cd "$(dirname "$0")" && pwd)"
 . "$SCRIPT_DIR_UPS/lib-config.sh"
+. "$SCRIPT_DIR_UPS/lib-memory-root.sh"
+PROJECT_MEMORY=$(resolve_memory_root "${cwd:-.}") || exit 0
 
 # Try to read config from project's .memory-config.md
-config_file="${cwd:-.}/.claude/memory/.memory-config.md"
+config_file="$PROJECT_MEMORY/.memory-config.md"
 if extract_frontmatter "$config_file"; then
     auto_sync_threshold=$(parse_yaml_int "auto_sync_threshold" "$auto_sync_threshold")
     hard_block_threshold=$(parse_yaml_int "hard_block_threshold" "$hard_block_threshold")
@@ -254,8 +256,8 @@ if [[ -n "$user_message" ]]; then
     # Queue entry (if detected and not suppressed)
     if [[ -n "$detected_type" ]]; then
         if ! check_suppression "$user_message_lower"; then
-            queue_file="${cwd:-.}/.claude/memory/corrections-queue.md"
-            if [[ -d "${cwd:-.}/.claude/memory" ]]; then
+            queue_file="$PROJECT_MEMORY/corrections-queue.md"
+            if [[ -d "$PROJECT_MEMORY" ]]; then
                 # Security: refuse to write through symlinks
                 [[ -L "$queue_file" ]] && exit 0
                 # Create queue file with header atomically (noclobber prevents race conditions)

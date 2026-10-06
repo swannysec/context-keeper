@@ -30,7 +30,7 @@ Links below point to primary documentation or source. Revisions are pinned where
 
 ## Limits and implementation checks
 
-- `.ai/` is not established here as reserved by any of these agents. The absence of a documented collision is not proof that every present or future tool ignores it. Keep the path configurable where the compatibility design calls for it, and diagnose existing directories before initialization.
+- `.ai/` is not established here as reserved by any of these agents. The absence of a documented collision is not proof that every present or future tool ignores it. Diagnose existing directories before initialization. Custom-root configuration is deferred unless the user reviews and approves it.
 - The documentation is version-sensitive. In particular, Claude Code nested skill behavior has explicit version gates; Antigravity, Zed, and Codex docs may change independently of this snapshot.
 - The Hermes source/docs disagreement is specific: its bundled skill reference says parent AGENTS files are ignored, while current `prompt_builder.py` and current feature docs describe root-to-working-directory AGENTS loading. Update or avoid relying on the stale reference when implementation begins.
 - The existing Context Keeper Codex `.codex/skills/` adapter discrepancy is verified against current official Codex documentation, but this note does not change or certify the adapter. Phase 8 must exercise init, read, sync, search, and handoff using current supported discovery.

@@ -2,11 +2,16 @@
 set -euo pipefail
 trap 'echo "[ConKeeper] stop.sh failed at line $LINENO" >&2; exit 0' ERR
 
+# Resolve from the project-root CWD.
+SCRIPT_DIR_STOP="$(cd "$(dirname "$0")" && pwd)"
+. "$SCRIPT_DIR_STOP/lib-memory-root.sh"
+PROJECT_MEMORY=$(resolve_memory_root "$PWD") || exit 0
+
 # Only act if project memory exists
-if [ -d ".claude/memory" ]; then
+if [ -d "$PROJECT_MEMORY" ]; then
     FLAG_DIR="${TMPDIR:-/tmp}/conkeeper"
     health_cache="$FLAG_DIR/health-$(date +%Y%m%d)"
-    LAST_SYNC_FILE=".claude/memory/.last-sync"
+    LAST_SYNC_FILE="$PROJECT_MEMORY/.last-sync"
 
     # Check if cached health results show stale files
     has_stale=false
@@ -30,13 +35,13 @@ if [ -d ".claude/memory" ]; then
     else
         # No stale files or sync already happened — fall back to existing reflect suggestion
         has_data=false
-        queue=".claude/memory/corrections-queue.md"
-        obs=".claude/memory/sessions/$(date +%Y-%m-%d)-observations.md"
+        queue="$PROJECT_MEMORY/corrections-queue.md"
+        obs="$PROJECT_MEMORY/sessions/$(date +%Y-%m-%d)-observations.md"
 
         if [ -f "$queue" ] && [ "$(wc -l < "$queue")" -gt 3 ]; then
             has_data=true
         fi
-        if [ -f "$obs" ] && [ "$(wc -l < "$obs")" -gt 3 ]; then
+        if memory_subdir_safe "$PROJECT_MEMORY" "$PROJECT_MEMORY/sessions" && [ -f "$obs" ] && [ "$(wc -l < "$obs")" -gt 3 ]; then
             has_data=true
         fi
 

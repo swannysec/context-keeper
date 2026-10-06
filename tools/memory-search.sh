@@ -89,21 +89,36 @@ fi
 SEARCH_DIRS=""
 SCOPE_DESC="project memory"
 
-# Default: .claude/memory/ excluding sessions/
-if [ -d ".claude/memory" ]; then
-    SEARCH_DIRS=".claude/memory"
-fi
+SCRIPT_DIR_MS="$(cd "$(dirname "$0")" && pwd)"
+. "$SCRIPT_DIR_MS/../hooks/lib-memory-root.sh"
+PROJECT_MEMORY=$(resolve_memory_root "$PWD") || exit 1
 
-if [ "$INCLUDE_GLOBAL" = true ]; then
-    if [ -d "$HOME/.claude/memory" ]; then
-        if [ -n "$SEARCH_DIRS" ]; then
-            SEARCH_DIRS="$SEARCH_DIRS
-$HOME/.claude/memory"
-        else
-            SEARCH_DIRS="$HOME/.claude/memory"
-        fi
-        SCOPE_DESC="$SCOPE_DESC + global memory"
+# Add each physical root once, including overlapping cross-project scopes.
+add_search_dir() {
+    local dir="$1"
+    local resolved existing existing_resolved
+    [ -d "$dir" ] || return 0
+    resolved=$(cd "$dir" && pwd -P) || return 1
+    while IFS= read -r existing; do
+        [ -n "$existing" ] || continue
+        existing_resolved=$(cd "$existing" && pwd -P) || continue
+        [ "$existing_resolved" != "$resolved" ] || return 0
+    done <<EOF_EXISTING
+$SEARCH_DIRS
+EOF_EXISTING
+    if [ -n "$SEARCH_DIRS" ]; then
+        SEARCH_DIRS="$SEARCH_DIRS
+$dir"
+    else
+        SEARCH_DIRS="$dir"
     fi
+}
+
+add_search_dir "$PROJECT_MEMORY"
+if [ "$INCLUDE_GLOBAL" = true ]; then
+    GLOBAL_MEMORY=$(resolve_memory_root "$HOME") || exit 1
+    add_search_dir "$GLOBAL_MEMORY"
+    SCOPE_DESC="$SCOPE_DESC + global memory"
 fi
 
 if [ "$INCLUDE_SESSIONS" = true ]; then
@@ -117,7 +132,7 @@ if [ "$CROSS_PROJECT" = true ]; then
     . "$SCRIPT_DIR_MS/../hooks/lib-config.sh"
 
     # Read project_search_paths from config
-    config_file=".claude/memory/.memory-config.md"
+    config_file="$PROJECT_MEMORY/.memory-config.md"
     cross_paths=""
     if extract_frontmatter "$config_file"; then
         # parse_yaml_array has a trailing-newline edge case; use parse_yaml_str
@@ -138,7 +153,7 @@ if [ "$CROSS_PROJECT" = true ]; then
     fi
 
     # Get current project's resolved path for exclusion
-    current_project=$(cd ".claude/memory" 2>/dev/null && pwd) || current_project=""
+    current_project=$(cd "$PROJECT_MEMORY" 2>/dev/null && pwd -P) || current_project=""
 
     while IFS= read -r search_path; do
         [ -z "$search_path" ] && continue
@@ -154,30 +169,18 @@ if [ "$CROSS_PROJECT" = true ]; then
         # Security: resolve path and check it doesn't escape via symlink
         resolved_path=$(cd "$search_path" 2>/dev/null && pwd -P) || continue
 
-        # Find .claude/memory directories under this path (max depth 3)
+        # Discover fixed roots at the existing depth limit, then resolve each project.
         while IFS= read -r mem_dir; do
             [ -z "$mem_dir" ] && continue
-            # Resolve for comparison
-            resolved_mem=$(cd "$mem_dir" 2>/dev/null && pwd -P) || continue
-
-            # Exclude current project
-            if [ "$resolved_mem" = "$current_project" ]; then
-                continue
-            fi
-
-            # Security: ensure resolved path is under the configured parent
+            project_dir=$(dirname "$(dirname "$mem_dir")")
+            selected=$(resolve_memory_root "$project_dir") || continue
+            resolved_mem=$(cd "$selected" 2>/dev/null && pwd -P) || continue
+            [ "$resolved_mem" != "$current_project" ] || continue
             case "$resolved_mem" in
-                "$resolved_path"/*) ;;
-                *) continue ;; # Symlink escape — skip
+                "$resolved_path"/*) add_search_dir "$selected" ;;
             esac
-
-            if [ -n "$SEARCH_DIRS" ]; then
-                SEARCH_DIRS="$SEARCH_DIRS
-$mem_dir"
-            else
-                SEARCH_DIRS="$mem_dir"
-            fi
-        done < <(find "$search_path" -maxdepth 3 -type d -name "memory" -path "*/.claude/memory" 2>/dev/null)
+        done < <(find "$search_path" -maxdepth 3 -type d -name "memory" \
+            \( -path "*/.claude/memory" -o -path "*/.ai/memory" \) 2>/dev/null)
     done <<EOF_CROSS
 $cross_paths
 EOF_CROSS
@@ -195,7 +198,8 @@ fi
 # ---------------------------------------------------------------------------
 # Build list of files, respecting --sessions exclusion and 30-day limit
 collect_files() {
-    local dir="$1"
+    local dir
+    dir=$(cd "$1" && pwd -P) || return 1
     local include_sessions="$2"
 
     # Find markdown files in the directory

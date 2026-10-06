@@ -1,5 +1,10 @@
 # ConKeeper Multi-Platform Guide
 
+## Memory roots
+
+New projects use `.ai/memory/`; existing legacy-only projects keep `.claude/memory/`. Global memory resolves independently between `~/.ai/memory/` and `~/.claude/memory/`. Both roots means prefer `.ai`, warn, and never merge. Paths shown below are new-project examples; substitute the selected legacy root when applicable. Use `bash <conkeeper-path>/tools/memory-root.sh` (or `--global`) to resolve without creating directories. All workflows use that root for settings, sessions, queues, decisions and handoffs. `AGENTS.md` is primary; the installer can also add the same instructions to `CLAUDE.md` as a compatibility fallback, preserving existing instructions.
+
+
 ConKeeper provides persistent AI context management across multiple coding platforms. This guide covers installation and usage for each supported platform.
 
 ## Platform Support Matrix
@@ -44,16 +49,16 @@ ConKeeper uses a layered approach:
 ├─────────────────────────────────────────────────┤
 │  Core Workflows (memory-init, sync, handoff)    │
 ├─────────────────────────────────────────────────┤
-│  Memory Files (.claude/memory/)                 │
+│  Memory Files (.ai/memory/)                 │
 └─────────────────────────────────────────────────┘
 ```
 
 ### Memory Location
 
-ConKeeper stores memory in `.claude/memory/` by default:
+ConKeeper stores memory in `.ai/memory/` by default:
 
 ```
-.claude/memory/
+.ai/memory/
 ├── active-context.md    # Current session focus
 ├── product-context.md   # Project overview
 ├── progress.md          # Task tracking
@@ -84,7 +89,7 @@ For universal compatibility, add this snippet to your project's AGENTS.md:
 
 This project uses ConKeeper for persistent AI context management.
 
-**Memory Location:** `.claude/memory/` (or `.ai/memory/`)
+**Memory Location:** Use existing `.ai/memory/`, otherwise existing `.claude/memory/`, otherwise `.ai/memory/` for initialization. Apply the same rule independently under the home directory for global memory. If both roots exist, use `.ai`, warn, and leave legacy files untouched.
 
 **Available Workflows:**
 - **memory-init** - Initialize memory for this project
@@ -133,7 +138,7 @@ Generate handoff for new session:
 ## Troubleshooting
 
 ### Memory not loading
-- Verify `.claude/memory/` directory exists
+- Verify `.ai/memory/` directory exists
 - Check that memory was initialized
 - Ensure AI has file read access
 
