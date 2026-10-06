@@ -221,17 +221,19 @@ class CurrentRoots(unittest.TestCase):
         self.assertFalse((self.project / '.claude').exists())
 
     def test_codex_installer_current_skill_selection(self):
-        # Native placement is unchanged in Phase 2; all supplied skills are copied.
         self.write(self.project / 'README.md', '# Fixture\n')
+        target = self.project / '.agents/skills'
+        sentinel = self.write(target / 'native/SKILL.md', 'KEEP-NATIVE\n')
+        legacy = self.write(self.project / '.codex/skills/native/SKILL.md', 'KEEP-LEGACY-NATIVE\n')
         result = self.run_script('tools/install.sh', payload='3\n')
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        target = self.project / '.codex/skills'
         self.assertEqual(sorted(p.name for p in target.iterdir()),
-                         ['memory-init', 'memory-search', 'memory-sync', 'session-handoff'])
-        for name in ('memory-init', 'memory-search', 'memory-sync', 'session-handoff'):
+                         ['memory-config', 'memory-init', 'memory-search', 'memory-sync', 'native', 'session-handoff'])
+        self.assertEqual(sentinel.read_text(), 'KEEP-NATIVE\n')
+        self.assertEqual(legacy.read_text(), 'KEEP-LEGACY-NATIVE\n')
+        for name in ('memory-init', 'memory-config', 'memory-search', 'memory-sync', 'session-handoff'):
             self.assertEqual((target / name / 'SKILL.md').read_bytes(),
-                             (REPO / 'platforms/codex/.codex/skills' / name / 'SKILL.md').read_bytes())
-        self.assertFalse((self.project / '.agents').exists())
+                             (REPO / 'platforms/codex/.agents/skills' / name / 'SKILL.md').read_bytes())
 
     def test_installer_claude_only_project_creates_agents(self):
         self.write(self.project / 'README.md', '# Fixture\n')
@@ -260,8 +262,8 @@ class CurrentRoots(unittest.TestCase):
                           'universal', 'windsurf', 'zed'])
         self.memory(self.project, '.ai', 'PACKAGEDROOTMARKER')
         for package, directory, count in (
-                ('claude-code', 'skills', 7), ('codex', '.codex/skills', 4),
-                ('copilot', '.github/skills', 4), ('cursor', '.cursor/skills', 4)):
+                ('claude-code', 'skills', 7), ('codex', '.agents/skills', 5),
+                ('copilot', '.github/skills', 5), ('cursor', '.cursor/skills', 5)):
             self.assertEqual(len(list((dist / package / directory).rglob('SKILL.md'))), count)
             self.assertIn('tools/memory-search.sh',
                           (dist / package / directory / 'memory-search/SKILL.md').read_text())
@@ -272,13 +274,17 @@ class CurrentRoots(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertIn('PACKAGEDROOTMARKER', result.stdout)
         self.assertTrue((dist / 'universal/core/workflows/memory-init.md').is_file())
+        self.assertEqual(len(list((dist / 'codex/.codex/skills').rglob('SKILL.md'))), 5)
+        for package in dist.iterdir():
+            self.assertTrue((package / 'core/workflows/durable-knowledge.md').is_file())
+            self.assertTrue((package / 'core/memory/templates/knowledge-proposal.md').is_file())
         self.write(self.project / 'README.md', '# Test project\n')
         result = subprocess.run(['/bin/bash', str(dist / 'universal/tools/install.sh')],
                                 cwd=self.project, env=self.env, input='6\ny\ny\n',
                                 capture_output=True, text=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        for directory in ('.github/skills', '.codex/skills', '.cursor/skills'):
-            self.assertEqual(len(list((self.project / directory).rglob('SKILL.md'))), 4)
+        for directory in ('.github/skills', '.agents/skills', '.cursor/skills'):
+            self.assertEqual(len(list((self.project / directory).rglob('SKILL.md'))), 5)
         self.assertTrue((self.project / '.windsurfrules').is_file())
         for filename in ('AGENTS.md', 'CLAUDE.md'):
             self.assertIn('ConKeeper Memory System', (self.project / filename).read_text())

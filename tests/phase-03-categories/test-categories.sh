@@ -244,7 +244,7 @@ EOF
 # ---------------------------------------------------------------------------
 test_categorization_rule_consistency() {
   local main_skill="$REPO_ROOT/skills/memory-sync/SKILL.md"
-  local codex_skill="$REPO_ROOT/platforms/codex/.codex/skills/memory-sync/SKILL.md"
+  local codex_skill="$REPO_ROOT/platforms/codex/.agents/skills/memory-sync/SKILL.md"
   local copilot_skill="$REPO_ROOT/platforms/copilot/.github/skills/memory-sync/SKILL.md"
   local cursor_skill="$REPO_ROOT/platforms/cursor/.cursor/skills/memory-sync/SKILL.md"
 

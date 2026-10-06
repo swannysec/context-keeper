@@ -108,3 +108,7 @@ Test installation:
 
 - [Claude Code Documentation](https://docs.claude.ai/code)
 - [ConKeeper Repository](https://github.com/swannysec/context-keeper)
+
+## Optional durable knowledge
+
+Set `knowledge_workspace` in the selected project/global `.memory-config.md` to an absolute containing vault/directory; absent project keys inherit global settings, a project path overrides, and false disables it. Existing memory workflows use relevant notes under `context-keeper/` with file tools. Candidate additions/changes always carry citation/provenance and a verbatim source excerpt for human review; auto-sync never approves promotion. See the packaged `core/workflows/durable-knowledge.md` and knowledge note/proposal templates. No new runtime dependency, manifest, migration or external service is required.

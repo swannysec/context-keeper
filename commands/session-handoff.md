@@ -41,3 +41,5 @@ Produces a markdown code block containing:
 - Remaining tasks
 - Key decisions made
 - Instructions for the next session
+
+For optional durable knowledge, follow the corresponding skill: inherit global `knowledge_workspace` unless the project overrides/disables it. Every proposed addition/change includes citation/provenance and a verbatim source excerpt in a quote/code block. Human review is still required during auto-sync; preserve pending items in the existing project session/handoff record when the store is unavailable.

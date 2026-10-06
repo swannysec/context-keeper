@@ -38,3 +38,5 @@ Invoke the memory-sync skill to update memory files with the current session sta
 - `active-context.md` - Current focus and recent decisions
 - `progress.md` - Task completion status
 - `decisions/ADR-NNN-*.md` - New architecture decision records
+
+For optional durable knowledge, follow the corresponding skill: inherit global `knowledge_workspace` unless the project overrides/disables it. Every proposed addition/change includes citation/provenance and a verbatim source excerpt in a quote/code block. Human review is still required during auto-sync; preserve pending items in the existing project session/handoff record when the store is unavailable.

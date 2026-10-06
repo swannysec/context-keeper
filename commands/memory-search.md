@@ -27,3 +27,5 @@ Search across memory files for keywords, patterns, or past decisions.
 - `--category <name>` — Filter to entries with matching category tag
 
 Results are grouped by file with line numbers and category tags.
+
+For optional durable knowledge, follow the corresponding skill: inherit global `knowledge_workspace` unless the project overrides/disables it. Every proposed addition/change includes citation/provenance and a verbatim source excerpt in a quote/code block. Human review is still required during auto-sync; preserve pending items in the existing project session/handoff record when the store is unavailable.

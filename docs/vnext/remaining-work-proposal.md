@@ -1,6 +1,6 @@
 # Integrated proposal for remaining vNext work
 
-Date: 2026-10-06. Status: revised for user review after comments on PR #26; implementation has not started. Baseline: released v1.5.0. The remaining work is a lightweight skill/workflow extension, followed by host verification. This revision removes unnecessary manifest, helper-library, export and migration deliverables from the earlier proposal.
+Date: 2026-10-06. Status: revised recommendations approved by the user on 2026-10-06; lightweight implementation delivered for review; remaining host verification recorded in [implementation evidence](lightweight-knowledge-verification.md). Baseline: released v1.5.0. The remaining work is a lightweight skill/workflow extension, followed by host verification. This revision removes unnecessary manifest, helper-library, export and migration deliverables from the earlier proposal.
 
 ## Outcome and scope
 
@@ -8,7 +8,7 @@ Keep ordinary project memory backward compatible. Let an agent use a separately 
 
 The existing `.ai/memory` default and indefinite `.claude/memory` fallback remain unchanged. No project or global memory needs to migrate. There is no standalone manifest, new Python/PyYAML dependency, required note conversion, database, daemon, export pipeline, or external-service adapter in this scope. Obsidian remains optional.
 
-The older specifications describe additional possible mechanisms. This proposal retains their durable-knowledge, human-review, provenance, privacy and native-state boundaries, but recommends deferring their manifest, automated ingestion and migration tooling. Those are not necessary to deliver this workflow. Approval would settle this narrower implementation scope; the original phase table remains historical traceability rather than six required implementation projects.
+The older specifications describe additional possible mechanisms. This proposal retains their durable-knowledge, human-review, provenance, privacy and native-state boundaries, but recommends deferring their manifest, automated ingestion and migration tooling. Those are not necessary to deliver this workflow. The user approved this narrower implementation scope; the original phase table remains historical traceability rather than six required implementation projects.
 
 ## Recommended decisions
 
@@ -28,7 +28,7 @@ The configuration setting names the separate durable knowledge store; it does no
 
 1. The agent reads project memory and, when configured, relevant durable knowledge. It does not load an entire vault or confuse global operating preferences with general knowledge.
 2. During work, it identifies a potentially reusable fact, relationship or decision. Routine candidates are presented at sync/handoff or a natural checkpoint; consequential conflicts are surfaced when they affect the task. This is skill behavior, with no background watcher.
-3. It presents the proposed claim, source/evidence, uncertainty, destination and effect. The human can approve, edit then approve, keep project-only, defer or reject. Silence leaves it pending. An explicit request to save a specified fact authorizes that fact, not unrelated additions.
+3. It presents the proposed claim, source/evidence, uncertainty, destination and effect. Every candidate also carries a citation/provenance and a verbatim relevant source sample in a quote or code block, as required by the approval. The human can approve, edit then approve, keep project-only, defer or reject. Silence leaves it pending. An explicit request to save a specified fact authorizes that fact, not unrelated additions.
 4. The agent writes the reviewed note to the agreed destination and records actual provenance/review information. An unavailable destination is reported, with the pending work preserved in the project record; never silently choose another canonical store.
 5. Later reading distinguishes current knowledge, historical or disputed claims, and pending suggestions. A recently edited timestamp does not make a claim authoritative. Preserve meaningful history and reopen a resolved conflict only on materially new evidence.
 
