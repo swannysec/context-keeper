@@ -1,105 +1,82 @@
 # Integrated proposal for remaining vNext work
 
-Date: 2026-10-06. Status: proposed for user review; implementation is not authorized by this document. Baseline: released v1.5.0. This proposal condenses original Phases 3–8 into two implementation chunks. It carries forward the existing specifications and identifies recommended choices below; approval would settle those choices without requiring a separate design round for each former phase.
+Date: 2026-10-06. Status: revised for user review after comments on PR #26; implementation has not started. Baseline: released v1.5.0. The remaining work is a lightweight skill/workflow extension, followed by host verification. This revision removes unnecessary manifest, helper-library, export and migration deliverables from the earlier proposal.
 
 ## Outcome and scope
 
-Keep ordinary project memory lightweight and backward compatible. Add an optional place for approved durable knowledge, a practical human review workflow, and deliberate migration. Agents use the same files and instructions through AGENTS.md primarily and CLAUDE.md where needed. Preserve each host's native memory, skills, sessions and lifecycle.
+Keep ordinary project memory backward compatible. Let an agent use a separately configured durable knowledge store, suggest useful additions, and save reviewed knowledge as readable Markdown. Use existing memory-init/config/sync/search/handoff skills and instructions, with AGENTS.md primary and CLAUDE.md fallback. Preserve native agent memory and lifecycle.
 
-No custom project/global memory roots, automatic migration, graph database, conflict database, daemon, mandatory Obsidian/service, automatic external imports, or runtime wrapper dependency. The fixed `.ai/memory` / `.claude/memory` selection from v1.5.0 remains unchanged. Do not rewrite existing notes simply to adopt metadata.
+The existing `.ai/memory` default and indefinite `.claude/memory` fallback remain unchanged. No project or global memory needs to migrate. There is no standalone manifest, new Python/PyYAML dependency, required note conversion, database, daemon, export pipeline, or external-service adapter in this scope. Obsidian remains optional.
 
-The existing [workspace](knowledge-workspaces.md), [metadata](provenance-and-relations.md), [promotion](promotion-and-reconciliation.md), [migration](migration.md), and [compatibility](compatibility.md) requirements remain the source constraints. The old phase numbering remains useful for tracing coverage, rather than dictating six separate PRs.
+The older specifications describe additional possible mechanisms. This proposal retains their durable-knowledge, human-review, provenance, privacy and native-state boundaries, but recommends deferring their manifest, automated ingestion and migration tooling. Those are not necessary to deliver this workflow. Approval would settle this narrower implementation scope; the original phase table remains historical traceability rather than six required implementation projects.
 
-## Decisions to approve together
+## Recommended decisions
 
-These are recommendations, not previously approved implementation details. Approve this table as a whole or identify rows to change.
+| Decision | Proposed behavior |
+|---|---|
+| Manifest | None. Paths and ordinary Markdown files are enough for this release; add version machinery only if a demonstrated incompatible format later needs it. |
+| Global knowledge configuration | One optional `knowledge_workspace` setting in existing `.memory-config.md`, pointing to a vault or ordinary directory. An absent project setting inherits the global setting. An explicit project path overrides it; explicit `false` disables it for that project. No setting anywhere means ordinary memory only. |
+| Store boundary | Context Keeper writes its new durable notes under `<configured directory>/context-keeper/`. It neither guesses the directory nor reorganizes the user's other notes. Workspace means this configured store, not a new application or runtime. |
+| Note format | Ordinary Markdown with flat, Obsidian-compatible YAML properties for newly created durable notes/proposals. Stable UUID identity survives renames. Existing notes remain readable and are not retrofitted automatically. |
+| Pending suggestions | A proposal is a suggested durable fact awaiting review. When a store is configured and available, deferred proposals can be Markdown files in its `context-keeper/proposals/`. Without an available store, record the pending suggestion in the existing project session/handoff record; do not create a new queue subsystem or global store. |
+| Reading and approval | Read existing knowledge as context while respecting its source, status and privacy. Treat agent-generated pending suggestions as suggestions, never approved facts. Explicit human review governs additions or changes to durable knowledge. No export or machine-enforced eligibility tool is proposed. |
+| Dependencies and migration | Keep the current lightweight skills and setup scripting. No new runtime dependency or migration tool. If implementation cannot deliver an agreed behavior without a materially different mechanism, return that issue for review. |
 
-| Decision | Recommended choice | Reason and boundary |
-|---|---|---|
-| Manifest scope | One JSON manifest at `<workspace>/context-keeper/_system/manifest.json`, initially only `schema_version: 1`. No manifest requirement for project/global operating memory. | Avoid duplicating root selection, existing feature config, note contents, and adapter inventories. Missing manifests on ordinary memory remain normal. Creating or adopting a managed workspace is an explicit operation. |
-| Workspace configuration | Add optional `knowledge_workspace` to existing `.memory-config.md`: an absolute directory path, or explicit `false` to disable it. Project setting overrides global; absent project setting inherits global; absent everywhere disables the feature. Always append `context-keeper/` to that directory. | Works with an Obsidian vault or ordinary directory. This configures the separately specified optional workspace, not a custom operating-memory root. No path guessing, shell expansion, environment override, or second config file. |
-| Notes and identity | YAML frontmatter in newly managed knowledge/proposal Markdown files; UUIDs for stable identity; readable typed wikilinks in a Relations section. | Existing plain Markdown stays readable. UUIDs do not change on rename or approval. Keep sources and evidence readable in the note body; do not require a graph index. |
-| Review storage | One Markdown file per proposal. Use the configured workspace's `proposals/` when reachable; otherwise the selected project root's `proposals/`. | No central queue database or new global writes. If a workspace is unreachable, pending material is retained locally; approval cannot silently write somewhere else. Moving a local proposal into a workspace preserves identity and requires the review workflow. |
-| Canonical eligibility | Only a valid, explicitly approved, `current` managed note in `knowledge/` or `projects/` is eligible for ordinary workspace retrieval/export. | Directory location alone cannot confer approval. Pending, deferred, rejected, disputed, deprecated, superseded, missing-metadata and malformed records are excluded; historical retrieval is explicit. Existing project-memory search remains compatible. |
-| Runtime dependencies | Existing base hooks/tools keep their dependencies. Optional structured workspace helpers use Python 3 and PyYAML for safe YAML parsing, with no other new library. | Avoid a bespoke YAML parser or expanding fragile shell parsing. Missing optional dependencies produce a clear diagnostic while ordinary memory continues working. No automatic system-wide installation. This dependency choice requires approval. |
-| Migration strategy | Explicit project-scoped copy, validate, then switch by creating the new fixed root; retain the legacy source and a backup. Global migration is a separate explicit operation. | Preserve rollback and avoid moving native directories. Both-root cases require a reviewed mapping; no automatic merge. |
+The configuration setting names the separate durable knowledge store; it does not change project/global operating-memory roots. It can be configured globally once and used by projects automatically. Do not write a global setting merely because a project opts in: the user chooses configuration scope. Existing private/tracking choices remain intact.
 
-Exact helper function names, internal modules, CLI wording and fixture organization can be chosen during implementation. They must implement this contract without adding new user settings or dependencies. If implementation exposes a material change to these choices, stop that dependent work and return it for review.
+## Everyday workflow
 
-## User workflow
+1. The agent reads project memory and, when configured, relevant durable knowledge. It does not load an entire vault or confuse global operating preferences with general knowledge.
+2. During work, it identifies a potentially reusable fact, relationship or decision. Routine candidates are presented at sync/handoff or a natural checkpoint; consequential conflicts are surfaced when they affect the task. This is skill behavior, with no background watcher.
+3. It presents the proposed claim, source/evidence, uncertainty, destination and effect. The human can approve, edit then approve, keep project-only, defer or reject. Silence leaves it pending. An explicit request to save a specified fact authorizes that fact, not unrelated additions.
+4. The agent writes the reviewed note to the agreed destination and records actual provenance/review information. An unavailable destination is reported, with the pending work preserved in the project record; never silently choose another canonical store.
+5. Later reading distinguishes current knowledge, historical or disputed claims, and pending suggestions. A recently edited timestamp does not make a claim authoritative. Preserve meaningful history and reopen a resolved conflict only on materially new evidence.
 
-Without a workspace, init/read/sync/search/handoff continue to work as they do in v1.5.0. A missing manifest is not an error. The existing tracking/privacy choices remain intact.
+An existing human-maintained note does not become unreadable because it lacks Context Keeper properties or an approval stamp. Unknown provenance remains unknown. Approval metadata is primarily the record of the agent's proposed changes and their review; it is not a demand that the user certify every existing note. Moving an agent-generated pending proposal into `knowledge/` does not approve it.
 
-To opt in, the user explicitly supplies a workspace directory through memory-config and confirms initialization of its managed `context-keeper/` namespace. Only these directories are managed:
+The proposed namespace remains small:
 
 ```text
 context-keeper/
-  knowledge/    approved durable knowledge; taxonomy is user-extensible
-  projects/     deliberately promoted project facts or links
-  proposals/    pending, deferred and rejected review records
-  _system/      workspace manifest; rebuildable navigation if later useful
+  knowledge/    reviewed durable notes, using the user's taxonomy
+  projects/     deliberately saved project facts or links, not shadow copies
+  proposals/    deferred suggestions awaiting human review
 ```
 
-Initialization must not adopt or overwrite an unrelated existing namespace. Validate an existing supported manifest before writes. An unsupported manifest version disables workspace operations with a diagnostic; it must not disable ordinary project memory or trigger conversion. An existing workspace without a manifest requires explicit adoption after inspecting its contents. Do not scan or reorganize the rest of the vault.
+Do not create `_system/` unless a later, reviewed need exists. Do not overwrite an existing file or adopt unrelated content during setup. Ordinary memory workflows continue when no durable store is configured. If the user explicitly requests a proposal without a configured store, keep it in the current project's record rather than creating infrastructure.
 
-During normal work, an agent identifies a useful durable candidate and distinguishes project state, global operating preferences and general knowledge. Routine general-knowledge candidates are queued and shown at sync/handoff or another natural task checkpoint. A significant decision or conflict affecting the current task is surfaced immediately. This is instruction-driven on all hosts; it adds no background watcher. Existing native hooks can supply reminders without becoming the only way the workflow functions.
+## Obsidian-compatible properties
 
-The review presents the proposed claim, destination, evidence, uncertainty and effect. The human can approve, edit then approve, keep project-only, defer or reject. An explicit request to save a specific fact can authorize that fact; it does not approve unrelated candidates. Silence leaves the record pending. Keep-project-only may update project memory within the user's authorized scope but never authorizes global promotion.
+Use YAML at the very start of a note, between `---` delimiters. Use unique, flat property names with simple scalar or list values. Keep `tags` and `aliases` as lists. Use `YYYY-MM-DD` for dates; use the documented ISO-style date/time form when a time is actually needed. Never invent a capture time, source, reviewer or approval.
 
-Approval retains the proposal's identity and evidence in the resulting note, records the actual review action, and writes only to the reviewed destination. If that destination is unavailable, leave the proposal pending and explain why. Do not fill in an invented reviewer or approval event. Duplicate proposals are detected by identity and comparison of the claim/source; uncertain semantic matches are shown for review rather than automatically merged. A rejection is retained and blocks automatic re-proposal unless materially new evidence appears.
+Use prefixed workflow fields such as `ck_id`, `ck_status` and `ck_review_state` so new workflow metadata is less likely to collide with a user's existing properties. Preserve other properties and their types. Lifecycle status (`current`, `superseded`, `disputed`, `deprecated`) is separate from review state (`pending`, `deferred`, `rejected`, `project_only`, `approved`). UUID generation is an ordinary file/tool operation, not a new identity service.
 
-Workspace retrieval defaults to current approved notes and shows source/status. Explicit historical retrieval can include approved superseded/deprecated notes and validity intervals. Proposal review is a separate view, not a canonical search result. A read-only eligibility listing gives companion retrieval/import tooling the allowed files and exclusions; it does not call QMD or Hindsight, launch services, or claim a production import was tested. Private content must not be broadened in scope without separate authorization.
+Optional fields can record a proposing agent, actual reviewer, review date and effective interval. Add only information that is useful and known; do not require a fixed set of empty properties on every note. Sources, uncertainty, review explanations and typed relationships belong in readable body sections. Existing metadata and human-edited content are preserved during changes.
 
-## Minimal note contract
+Relations remain ordinary text such as `works_at [[Company]]` or `supersedes [[Previous Decision]]`. If a wikilink is placed in a YAML property, quote it; do not put Markdown prose or nested source/review objects into properties. Rename deliberately, retain the UUID, and preserve aliases or update affected links within the managed notes. Ambiguous identities are brought to the user's attention rather than silently merged. No graph index is required.
 
-New managed notes use these fields; optional fields are recorded only when known. This is the proposed serialization contract to approve, not a request to retrofit every existing note.
-
-| Field | Meaning |
-|---|---|
-| `schema_version` | `1` for the managed note format; independent of the plugin release version. |
-| `id`, `type`, `title` | Stable UUID, extensible note type, human-readable title. |
-| `aliases`, `tags` | Lists, empty when unused; no imposed knowledge taxonomy. |
-| `created`, `updated` | Actual capture/edit times; not evidence of when the underlying fact became true. |
-| `status` | `current`, `superseded`, `disputed`, or `deprecated`. |
-| `valid_from`, `valid_to` | Optional effective interval for the claim. |
-| `review_state` | `pending`, `deferred`, `rejected`, `project_only`, or `approved`. |
-| `proposed_by`, `reviewed_by`, `reviewed_at` | Actual agent/reviewer/action information when available. An approved record must contain a real review event; unknown identity must not be fabricated. |
-| `destination` | Proposed or reviewed managed destination, required for proposals. |
-
-Sources/Evidence in the body records source identifiers or links, capture time, and uncertainty. Relations contains readable entries such as `supersedes [[Previous Decision]]`; preserve identity and historical claims during changes. Rename within managed content keeps the UUID and preserves aliases or repairs affected managed links; never silently rewrite unrelated vault notes. Duplicate UUIDs and ambiguous titles are diagnosed. Validation is a focused command, not a permanent graph service.
-
-Existing plain notes can be read normally. Deliberate promotion can enrich a reviewed note; absent metadata must never be interpreted as implicit approval for canonical import. Existing privacy/category conventions remain supported. Pending/deferred files remain ineligible even if renamed or moved into `knowledge/`.
-
-Reconciliation follows the existing scope → status → authority → temporal validity → provenance guidance. Resolve the active interpretation for the task, preserve meaningful history, and proceed. A newer timestamp alone does not defeat an approved decision. An agent's inference can suggest review but cannot overwrite approved state. If human judgment is required, show the conflicting claims and consequence while continuing unrelated work. Reopen only on materially new evidence.
+These conventions follow [Obsidian's official Properties documentation](https://obsidian.md/help/properties), checked 2026-10-06. Obsidian supports flat text/list/date properties, while nested properties are not supported in its normal property editor. This is a design-format check, not a claim that a live Obsidian workflow was tested.
 
 ## Two implementation chunks
 
-### A. Workspace, metadata and review workflow
+### A. Lightweight durable-knowledge workflow
 
-Combines original Phases 3–6 and the relevant parts of Phase 8. Deliver the optional manifest/configuration, workspace initialization, note validation, proposal review actions, eligible retrieval/export listing and instruction updates. Reuse existing memory-init/config/sync/search/handoff entry points; avoid adding a command for every internal operation. Include templates, packages, guides and changelog updates with the behavior change.
+Update existing skills, core instructions, templates, platform copies and setup/config guidance for the agreed configuration inheritance, readable metadata and proposal/review behavior. Reuse existing scripting only where needed for setup or locating configured files; no general YAML parser, new dependency, metadata engine, queue service or exporter. Configuration values are treated as data, never evaluated as shell code.
 
-Perform Claude and Codex workflow checks during this chunk: workspace opt-in, candidate creation, edited approval, search, sync/handoff and legacy ordinary-memory operation. File-based workflows must also be understandable to any agent reading AGENTS.md or the CLAUDE.md fallback. Native adapter discovery is verified separately from workflow execution. Use temporary projects/HOME and scratch workspaces; do not write real personal/global memory to test compatibility.
+Check actual Claude and Codex init/read/sync/search/handoff behavior during this chunk where available, including an inherited global knowledge setting, project disable, unreachable store, pending suggestions, edited approval and ordinary legacy memory. Keep the workflow understandable to any agent that can read AGENTS.md or CLAUDE.md. Use scratch projects/workspaces, not real personal or native memory.
 
-### B. Migration and remaining host verification
+### B. Remaining host compatibility and packaging
 
-Combines original Phase 7 with remaining Phase 8 coverage. Deliver one migration workflow with preview, backup, staged copy, content/link/config validation, explicit apply and restore. Show exact source, destination, backup location, collisions, exclusions and adapter changes before asking for apply approval. Place default project backup/receipt material under `.ai/migration-backups/<operation-id>/`, outside the selected memory root; preview identifies its privacy/tracking implications. The receipt records file hashes and operation state rather than adding another memory schema manifest.
+Verify file-based instructions, native discovery where applicable, packaging and complete workflows across available supported hosts: Claude Code, Codex, Copilot, Cursor, Windsurf, Antigravity, Zed, Delta, Hermes and Pi. Update an adapter only when a demonstrated compatibility issue requires it. Record versions and actual exercised behavior; unavailable hosts remain unverified. Reading a skill menu or passing a fixture does not certify a workflow.
 
-Coordinate known writers before apply, recheck source hashes after preview, and stop when source changes. Preserve source files; prevent stale legacy hooks from continuing to write after the switch. Rollback restores the pre-migration selection only after checking for subsequent edits; changed files require review rather than clobbering. Repeated execution reports completed work without duplicating content. The global operation requires its own reviewed scope. Both-root mappings, publication of backups and divergent-edit reconciliation remain explicit decisions per operation, not blanket consequences of implementation approval.
+No migration is included. Legacy projects can remain on `.claude/memory` indefinitely. The older [migration specification](migration.md) describes optional future tooling if separately requested, not a prerequisite for this work. Neither a real migration nor implementation of that tooling is authorized by this proposal.
 
-Exercise init/read/sync/search/handoff and native-state preservation across available supported hosts: Claude Code, Codex, Copilot, Cursor, Windsurf, Antigravity, Zed, Delta, Hermes and Pi. Refresh host-specific discovery/precedence documentation when implementing adapters. Record versions, actual executed workflows and unavailable capabilities. Add no mandatory host, service or model. Unavailable hosts remain unverified; do not claim universal certification. Companion wrapper/runtime integration stays outside this implementation scope.
+QMD/Hindsight ingestion, export controls, wrapper integration and transport/synchronization are also deferred. A future integration must preserve review state, exclude proposals and private material from broader canonical imports, and receive its own scoped approval. This proposal does not implement or certify those integrations.
 
-## Verification proportional to the change
+## Verification and autonomy
 
-Extend existing fixture suites and use real workflow smoke checks where hosts are available. No elaborate new harness, benchmark project, duplicated assertion suite, or repeated full regression run without a new reason.
+Use existing tests and focused smoke checks for changed behavior. Verify configuration inheritance/disable, literal paths with spaces, unavailable stores, instruction preservation, metadata formatting, pending versus approved notes, review actions including silence, privacy, legacy memory and native-state preservation. No new broad verification framework. Run existing regressions for material scripting changes, then target review fixes; documentation-only edits do not require a full runtime rerun.
 
-Chunk A needs focused cases for base/legacy memory without optional components, explicit workspace opt-in/disable/inheritance, unreachable workspace and local proposals, unsupported versions, plain notes, duplicate identity, privacy, renamed/misplaced pending records, all review actions including silence, rejected duplicates, edited approval and historical retrieval. Verify an actual Claude and Codex workflow where execution access permits it; otherwise describe the precise gap. Source/fixture checks alone do not certify a host.
+Approval of this revised proposal permits implementation of A then B on feature branches with reviewable PRs. Routine internal choices, proportionate tests, documentation and review fixes can proceed without repeated permission requests. Material scope changes, new dependencies/settings or automation beyond this contract return for review.
 
-Chunk B needs preview immutability, normal copy/apply, collisions, source changes after preview, an interrupted apply, unsafe/unwritable paths, restore with and without intervening edits, repeated operation and exclusion of native state. Check emitted eligibility manifests against positive and negative fixtures; live external-service ingestion is not part of this scope. Run existing regressions once for each material runtime chunk, then target subsequent review fixes. Record evidence and limits without claiming unavailable tests ran.
-
-## Approval and autonomy
-
-Approval of this proposal authorizes implementation of A then B on feature branches with reviewable PRs, including necessary shared helpers, adapters, documentation, proportionate tests and proposed release preparation. Routine internal choices need not return for permission. Keep each PR coherent; split A or B only if an independently reviewable boundary or real compatibility issue makes that useful.
-
-It does not authorize automatic PR merging, tagging/publication, modifying a user's actual workspace or native memory, running a real migration, importing private material into external services, or changing the agreed dependency/configuration contract. Those actions require their own authorization. Material changes to behavior or scope return for review; ordinary bugs and review fixes remain within approved scope.
-
-The implementation is complete when both chunks satisfy their specified behavior and available-host evidence is reported honestly. A release does not imply unavailable hosts were certified. No implementation starts solely because this document or its planning PR is merged; the user must approve its proposed choices and implementation scope.
+Approval does not authorize automatic merging/releases, edits to real personal workspaces/native memory, migrations, or external imports. It authorizes development and scratch verification of the agreed behavior. A merged planning document alone is not implementation approval. Completion reports distinguish delivered workflow behavior from unavailable host verification.
