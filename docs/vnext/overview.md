@@ -1,6 +1,6 @@
 # Context Keeper vNext
 
-Status: Phase 1 merged; Phase 2 implements fixed portable-root selection. The user approved the revised lightweight durable-knowledge proposal; standalone manifests, new helper dependencies, export and migration tooling are deferred. Implementation and host verification are in progress. Requirements approved in the bootstrap handoff on 2026-10-06; custom-root support was subsequently removed from scope by the user. Baseline: v1.4.0, commit `564d419f0a1f3f38782ebf4d4cb5c04dd269d2f7`.
+Status: Phase 1 merged; Phase 2 implements fixed portable-root selection. The user approved the revised lightweight durable-knowledge proposal; standalone manifests, new helper dependencies, export and migration tooling are deferred. The approved implementation and focused Claude/Codex verification are complete for review. The user waived other-host verification on 2026-10-06; those hosts remain unverified. Release preparation remains separate. Requirements approved in the bootstrap handoff on 2026-10-06; custom-root support was subsequently removed from scope by the user. Baseline: v1.4.0, commit `564d419f0a1f3f38782ebf4d4cb5c04dd269d2f7`.
 
 Context Keeper keeps project state and operating memory in portable Markdown, independent of the host agent. vNext first makes memory-root resolution consistent, preserving existing projects, then adds optional general knowledge and human-reviewed promotion.
 

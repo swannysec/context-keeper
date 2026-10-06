@@ -1,6 +1,6 @@
 # Integrated proposal for remaining vNext work
 
-Date: 2026-10-06. Status: revised recommendations approved by the user on 2026-10-06; lightweight implementation delivered for review; remaining host verification recorded in [implementation evidence](lightweight-knowledge-verification.md). Baseline: released v1.5.0. The remaining work is a lightweight skill/workflow extension, followed by host verification. This revision removes unnecessary manifest, helper-library, export and migration deliverables from the earlier proposal.
+Date: 2026-10-06. Status: revised recommendations approved by the user on 2026-10-06; lightweight implementation delivered for review; verification results and limits recorded in [implementation evidence](lightweight-knowledge-verification.md). Baseline: released v1.5.0. The approved work is a lightweight skill/workflow extension with focused host verification. The implementation is complete for review; on 2026-10-06 the user waived verification of hosts other than Claude and Codex. This revision removes unnecessary manifest, helper-library, export and migration deliverables from the earlier proposal.
 
 ## Outcome and scope
 
@@ -67,7 +67,7 @@ Check actual Claude and Codex init/read/sync/search/handoff behavior during this
 
 ### B. Remaining host compatibility and packaging
 
-Verify file-based instructions, native discovery where applicable, packaging and complete workflows across available supported hosts: Claude Code, Codex, Copilot, Cursor, Windsurf, Antigravity, Zed, Delta, Hermes and Pi. Update an adapter only when a demonstrated compatibility issue requires it. Record versions and actual exercised behavior; unavailable hosts remain unverified. Reading a skill menu or passing a fixture does not certify a workflow.
+Verify file-based instructions and packaging, with live Claude Code and Codex workflows. The user explicitly waived live verification of Copilot, Cursor, Windsurf, Antigravity, Zed, Delta, Hermes and Pi on 2026-10-06; those hosts remain unverified and are not completion gates. Update an adapter only when a demonstrated compatibility issue requires it. Record versions and actual exercised behavior; unavailable hosts remain unverified. Reading a skill menu or passing a fixture does not certify a workflow.
 
 No migration is included. Legacy projects can remain on `.claude/memory` indefinitely. The older [migration specification](migration.md) describes optional future tooling if separately requested, not a prerequisite for this work. Neither a real migration nor implementation of that tooling is authorized by this proposal.
 

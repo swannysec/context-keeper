@@ -1,6 +1,6 @@
 # Lightweight durable knowledge: implementation evidence
 
-Date: 2026-10-06. Base: released v1.5.0 (`963be12`). Scope: the user-approved [revised remaining-work proposal](remaining-work-proposal.md), including citation/provenance and a verbatim source sample for every candidate. Implementation is delivered for review; host verification is partial, not a blanket compatibility certification.
+Date: 2026-10-06. Base: released v1.5.0 (`963be12`). Scope: the user-approved [revised remaining-work proposal](remaining-work-proposal.md), including citation/provenance and a verbatim source sample for every candidate. Implementation is delivered for review. The user explicitly waived other-host verification on 2026-10-06, completing the required scope; verification evidence remains limited to the exercised hosts, not a blanket compatibility certification.
 
 ## Delivered behavior
 
@@ -41,7 +41,7 @@ Direct artifact checks confirmed inherited global configuration with a path cont
 
 ## Host limits and source research
 
-The earlier isolated Claude login check failed, and automatic approval review initially rejected Keychain credential extraction without explicit authorization. That rejected action did not execute. The user subsequently authorized headless verification with credentials kept local and out of logs, enabling the successful run above. Other hosts still require their own actual workflow evidence.
+The earlier isolated Claude login check failed, and automatic approval review initially rejected Keychain credential extraction without explicit authorization. That rejected action did not execute. The user subsequently authorized headless verification with credentials kept local and out of logs, enabling the successful run above. Other hosts are not required verification work following the user’s explicit waiver on 2026-10-06; any future compatibility certification would still need actual workflow evidence.
 
 Antigravity, Delta, Hermes and Zed GUI applications were found locally. Their complete isolated workflows were not exercised. No runnable Copilot, Cursor, Windsurf or Pi CLI was discovered in the inspected PATH. Installed applications, source documentation and package fixtures do not establish successful host workflows.
 
