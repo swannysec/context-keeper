@@ -205,6 +205,38 @@ class CurrentRoots(unittest.TestCase):
         config.write_text('---\nproject_search_paths: disabled\n---\n')
         self.search('ROOTMARKER', '--cross-project', status=1)
 
+    def test_local_candidate_history_excluded_from_default_search(self):
+        memory = self.memory(self.project, '.claude', 'ORDINARYKNOWLEDGEMARKER')
+        parent = self.base / 'other projects'
+        other = self.memory(parent / 'legacy', '.claude', 'OTHERORDINARYKNOWLEDGEMARKER')
+        missing_store = self.base / 'unreachable knowledge store'
+        for state in ('pending', 'deferred', 'rejected'):
+            for root, scope in ((memory, 'LOCAL'), (other, 'OTHER')):
+                self.write(root / 'sessions' / (state + '-handoff.md'),
+                           '# Knowledge candidate\nReview state: ' + state +
+                           '\n' + scope + state.upper() + 'CANDIDATEMARKER\n')
+        for setting in ('', 'knowledge_workspace: ' + json.dumps(str(missing_store)) + '\n'):
+            with self.subTest(workspace='unreachable' if setting else 'absent'):
+                config = '---\nproject_search_paths: [' + json.dumps(str(parent)) + ']\n' + setting + '---\n'
+                for root in (memory, other):
+                    self.write(root / '.memory-config.md', config)
+                before = snapshot(self.base)
+                project_output = self.search('MARKER')
+                cross_output = self.search('MARKER', '--cross-project')
+                self.assertIn('ORDINARYKNOWLEDGEMARKER', project_output)
+                self.assertIn('OTHERORDINARYKNOWLEDGEMARKER', cross_output)
+                self.assertNotIn('CANDIDATEMARKER', project_output)
+                self.assertNotIn('CANDIDATEMARKER', cross_output)
+                project_history = self.search('CANDIDATEMARKER', '--sessions')
+                cross_history = self.search('CANDIDATEMARKER', '--sessions', '--cross-project')
+                for state in ('pending', 'deferred', 'rejected'):
+                    self.assertIn('LOCAL' + state.upper() + 'CANDIDATEMARKER', project_history)
+                    self.assertIn('OTHER' + state.upper() + 'CANDIDATEMARKER', cross_history)
+                    self.assertIn('Review state: ' + state,
+                                  self.search('Review state: ' + state, '--sessions', '--cross-project'))
+                self.assertEqual(snapshot(self.base), before)
+                self.assertFalse(missing_store.exists())
+
     def test_installer_instruction_preservation_and_repeat(self):
         agents = self.write(self.project / 'AGENTS.md', '# Existing instructions\nKEEP-AGENTS\n')
         claude = self.write(self.project / 'CLAUDE.md', '# Native fallback\nKEEP-CLAUDE\n')
