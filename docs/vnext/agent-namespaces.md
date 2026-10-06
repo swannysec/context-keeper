@@ -16,7 +16,7 @@ Verified 2026-10-06. This note records documented/source-inspected paths that ma
 
 ## Source record
 
-Links below point to primary documentation or source. Revisions are pinned where source was inspected from a checkout; web documentation was checked on the date above.
+Links below point to primary documentation or source. Revisions are pinned where source was inspected from a checkout; web documentation was checked on the date above. Delta is a private repository: its source links require repository access and return 404 anonymously. The recorded paths and revision were confirmed through the authorized checkout and authenticated GitHub API; the links are restricted references, not public documentation.
 
 | Project | Primary source and verified revision/date | Evidence used |
 |---|---|---|
