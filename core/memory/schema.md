@@ -647,3 +647,7 @@ Memory files are loaded into AI assistant context and may influence behavior. Se
 - Prompt injection awareness
 - Recommendations for shared repositories
 - High-security environment guidelines
+
+## Optional durable knowledge format
+
+The operating-memory file formats above remain unchanged. New optional durable notes use the [knowledge note template](templates/knowledge-note.md) and [proposal template](templates/knowledge-proposal.md), following [durable knowledge workflow](../workflows/durable-knowledge.md). Flat YAML properties include UUID `ck_id`, lifecycle `ck_status`, independent `ck_review_state`, and lists for tags/aliases. Preserve existing properties and readable notes without retrofitting them. Sources, verbatim quoted evidence, interpretation/uncertainty and actual review actions are in the body. A moved pending proposal is still pending; directory placement does not approve it. No schema manifest or migration is required.

@@ -64,7 +64,9 @@ build_codex() {
     local pkg_dir="${BUILD_DIR}/codex"
     mkdir -p "$pkg_dir"
     
-    cp -r "${SCRIPT_DIR}/platforms/codex/.codex" "$pkg_dir/"
+    cp -r "${SCRIPT_DIR}/platforms/codex/.agents" "$pkg_dir/"
+    # Older Codex consumers can still use the legacy package copy.
+    cp -r "${SCRIPT_DIR}/platforms/codex/.agents" "$pkg_dir/.codex"
     cp "${SCRIPT_DIR}/platforms/codex/README.md" "$pkg_dir/"
     cp "${SCRIPT_DIR}/core/snippet.md" "$pkg_dir/AGENTS-SNIPPET.md"
     
@@ -168,6 +170,9 @@ main() {
     build_zed
     build_universal
     for package in "$BUILD_DIR"/*; do
+        if [ ! -d "$package/core" ]; then
+            cp -r "$SCRIPT_DIR/core" "$package/core"
+        fi
         mkdir -p "$package/tools" "$package/hooks"
         cp "$SCRIPT_DIR/tools/memory-root.sh" "$SCRIPT_DIR/tools/memory-search.sh" "$package/tools/"
         cp "$SCRIPT_DIR/hooks/lib-memory-root.sh" "$SCRIPT_DIR/hooks/lib-config.sh" "$SCRIPT_DIR/hooks/lib-privacy.sh" "$package/hooks/"

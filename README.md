@@ -272,6 +272,14 @@ The context preservation hooks require `jq` and `bc`. Install via your package m
 - **User control** - Memory suggestions can be disabled per-project
 - **Simple over complex** - Standard filesystem; no special tooling
 
+## Optional durable knowledge
+
+The existing memory workflows can also use a separate Markdown knowledge store, including an Obsidian vault. Use memory-config to set `knowledge_workspace` in the selected project's or global `.memory-config.md` to the absolute containing directory. Projects inherit the global setting unless they override it with another path or `false`; removing the project key restores inheritance. Authorized setup creates only `context-keeper/knowledge/`, `projects/` and `proposals/` beneath that directory, preserving existing notes.
+
+An agent proposes useful additions/changes with the claim, destination/effect, uncertainty, citation/provenance and a verbatim relevant source sample in a quote or code block. You can approve, edit then approve, keep project-only, defer or reject. Silence and automatic project-memory sync do not approve durable promotion. Existing notes remain readable; new notes use flat Obsidian-compatible YAML properties and stable UUIDs. Pending work stays in the existing project session/handoff record when the store is unavailable.
+
+This is a file-tool/skill workflow, with no new runtime dependency, manifest, migration or export pipeline. The shell memory-search tool continues searching operating memory; the memory-search skill reads relevant durable notes with the same privacy rules. See [workflow](core/workflows/durable-knowledge.md), [knowledge note template](core/memory/templates/knowledge-note.md), and [proposal template](core/memory/templates/knowledge-proposal.md). Host execution evidence and limits are recorded in [verification](docs/vnext/verification.md).
+
 ## Security Considerations
 
 Memory files may contain project context that influences AI assistant behavior. For security guidance, see [SECURITY.md](SECURITY.md).
