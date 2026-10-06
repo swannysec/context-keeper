@@ -1,5 +1,7 @@
 # Compatibility-first implementation plan
 
+An [integrated proposal for the remaining work](remaining-work-proposal.md) combines original Phases 3–8 into two implementation chunks and recommends up-front decisions. It is pending user approval; the table below retains the original phase requirements for traceability. No later-phase implementation is authorized by the proposal alone.
+
 Status: Phase 1 merged; Phase 2 fixed-root implementation authorized on 2026-10-06. Custom-root configuration was explicitly removed from scope by the user and requires separate review and approval. Phases below are sequential within this workstream. Runtime Workstream 1 may proceed independently. Wrapper implementation waits for verified interfaces, though its base profile need not wait for OpenShell.
 
 Phase 2 is implemented and verified on `feat/portable-memory-roots`; see [Phase 2 evidence](verification.md#phase-2-verification--2026-10-06). Existing regression suites passed, and focused tests cover independent fixed-root selection, `.ai` hook/search/handoff behavior, unsafe/unwritable roots, copied instructions, installer preservation and packaged search. The bounded review's concrete findings were addressed. Native placement is unchanged and no host is newly certified. Stop before Phase 3.
