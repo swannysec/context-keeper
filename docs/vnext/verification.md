@@ -24,4 +24,18 @@ All 15 existing `tests/*/test-*.sh` suites ran sequentially with macOS `/bin/bas
 
 The older local memory note about a phase-08 Python shim failure did not reproduce with the system Python selected for this run. It remains historical context, not a current baseline failure. Tests report PASS for some graceful fallback cases, so suite totals do not imply every integration was exercised. No live Hermes/OpenShell/Hindsight/QMD deployment was started.
 
-Phase 1 still needs targeted coverage review and characterization tests for the compatibility matrix before behavior changes. Preserve this baseline, add new behavior tests, and record actual phase results separately.
+At bootstrap, Phase 1 still needed targeted coverage review and characterization tests for the compatibility matrix before behavior changes. Subsequent Phase 1 results are recorded separately below.
+
+## Phase 1 final verification — 2026-10-06
+
+Characterized source revision: `4adf4535563d059216e0201ed06bddb11b7219a6` on `docs/vnext-bootstrap`. See [Phase 1 evidence](phase-1-characterization.md) for the component inventory, reproduction command, observed behaviors, known gaps and plugin QA results.
+
+The original 15 suites were run before edits and again after adding coverage, sequentially on macOS `/bin/bash` 3.2.57 with BSD userland and isolated child-process HOME/TMPDIR. Both runs exited zero for every suite: 214 reported passes, zero failures; no dependency-skipped reports. The final run also included the new characterization suite: 13 unittest methods passed, including eight independently isolated project/global root-matrix subcases; zero failures. These method counts are separate from the existing shell suites' reported assertion counts.
+
+New coverage exercises root detection/search, mixed scopes, read-only search, nested CWD, config bootstrap, symlink refusal and the known sessions-parent gap, privacy filtering, JSON-CWD observation/correction writers, native-state sentinels, cross-project mixed roots/depth, repeat instruction installation, CLAUDE-only installation, Codex skill selection and scratch package builds. Known-gap assertions record defects; they do not endorse them as intended behavior.
+
+Shell syntax validation and `git diff --check` passed. A fresh SHA-256 inventory confirmed all nine files in the four excluded items were unchanged from before branch switching. Those items remain unstaged/untracked and excluded from the commit. No production files under hooks, tools, commands, skills, platforms, core, or manifests changed; no user/global memory was written.
+
+Plugin QA validate mode found the repository marketplace, then rejected `source: "./"` under its monorepo source rule. Phases 3–8 were blocked by the unavailable valid toolkit inventory/layout; separate standalone checks are recorded in the evidence document. This is not a plugin QA PASS. No real Claude, Codex or other agent workflow was invoked or newly certified. Packaging, native adapter discovery, AGENTS-primary/CLAUDE-fallback behavior and write-symlink gaps remain compatibility gates.
+
+Phase 1 characterization is complete. Phase 2 remains unstarted: `.ai` default selection and effective legacy fallback are acceptance requirements, not newly implemented behavior.

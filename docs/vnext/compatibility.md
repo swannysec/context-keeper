@@ -29,3 +29,5 @@ All readers/writers must use the same selected root: init, sync, search, config,
 Do not repurpose `.claude/`, `.codex/`, `.agents/`, `.pi/`, `.zed/`, `.hermes/`. Native skill placement is allowed in its documented namespace, but Context Keeper memory remains distinct. `.ai` is this project's chosen portable convention, not a globally reserved namespace. See [namespace verification](agent-namespaces.md).
 
 Adding vNext must not require Obsidian/Hindsight/QMD/OpenShell/Hermes. Existing legacy installations remain supported until explicitly migrated. Changes to documented adapters must be tested through complete init/read/sync/search/handoff workflows rather than a host listing installed skills.
+
+Portable instructions use `AGENTS.md` as the primary entry point and `CLAUDE.md` as a backward-compatible fallback for hosts that need it. Adapter work must preserve existing user instructions and native memory, keep both instruction surfaces consistent, and verify host-specific precedence rather than assuming every loader behaves identically. This is an acceptance requirement; Phase 1 does not implement or certify the fallback.

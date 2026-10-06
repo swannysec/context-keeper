@@ -2,6 +2,8 @@
 
 Status: documentation bootstrap complete; broad implementation awaits plan review. Phases below are sequential within this workstream. Runtime Workstream 1 may proceed independently. Wrapper implementation waits for verified interfaces, though its base profile need not wait for OpenShell.
 
+Phase 1 characterization performed on 2026-10-06 against bootstrap revision `4adf4535563d059216e0201ed06bddb11b7219a6`: the original 15 suites passed (214 reported passes), and focused coverage was added without production changes. See [characterization evidence](phase-1-characterization.md) and [final verification](verification.md). Known gaps include sessions-directory symlink writes, omitted packaged search dependencies, installer skill selection and the missing CLAUDE fallback. Plugin QA's monorepo source rule rejects this standalone layout; supplemental checks are recorded separately. Phase 2 remains unstarted; choose explicit-root configuration/anchoring and preserve legacy fallback before implementing the new default. AGENTS.md must be the primary instruction surface with CLAUDE.md as the backward-compatible fallback when adapter work is authorized. No host is newly certified by Phase 1.
+
 Each phase updates this plan with actual results, versions, failures and remaining decisions. Use feature branches and PRs; tests precede changed behavior. Do not advance with unexplained baseline failures or certify a host from documentation alone.
 
 | Phase | Prerequisites and deliverables | Verification gate / stop condition |
