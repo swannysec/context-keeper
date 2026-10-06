@@ -5,7 +5,7 @@ All notable changes to ConKeeper will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## [1.6.0] — 2026-10-06
 
 ### Added
 
@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Current Codex installation uses `.agents/skills/`, preserving native user content and retaining a legacy `.codex/skills/` distribution copy. All distributions include shared workflows and templates. No manifest, new runtime dependency, migration or external export is introduced.
 
-## [1.5.0] — Pending release
+## [1.5.0] — 2026-10-06
 
 ### Changed
 
