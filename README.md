@@ -10,7 +10,7 @@ New projects use `.ai/memory/`; existing legacy-only projects keep `.claude/memo
 
 ## vNext planning
 
-The [vNext specifications and compatibility-first plan](docs/vnext/overview.md) describe intended portable memory roots and optional Knowledge Workspaces. Fixed root selection is implemented in Phase 2; the knowledge and later-phase specifications remain planned. [Phase 1 characterization](docs/vnext/phase-1-characterization.md) records regression coverage and the remaining compatibility gates.
+Fixed memory-root selection and the [approved lightweight durable-knowledge scope](docs/vnext/remaining-work-proposal.md) are implemented. Existing skills, workflows and Markdown templates support optional Knowledge Workspaces with configuration inheritance, human-reviewed proposals and quoted provenance. [Implementation evidence](docs/vnext/lightweight-knowledge-verification.md) records the completed checks and host-verification limits. The broader [vNext specifications](docs/vnext/overview.md) retain manifest, migration tooling, automated ingestion/export and wrapper integration as deferred work requiring separate approval.
 
 ## Overview
 
