@@ -272,6 +272,16 @@ class CurrentRoots(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertIn('PACKAGEDROOTMARKER', result.stdout)
         self.assertTrue((dist / 'universal/core/workflows/memory-init.md').is_file())
+        self.write(self.project / 'README.md', '# Test project\n')
+        result = subprocess.run(['/bin/bash', str(dist / 'universal/tools/install.sh')],
+                                cwd=self.project, env=self.env, input='6\ny\ny\n',
+                                capture_output=True, text=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        for directory in ('.github/skills', '.codex/skills', '.cursor/skills'):
+            self.assertEqual(len(list((self.project / directory).rglob('SKILL.md'))), 4)
+        self.assertTrue((self.project / '.windsurfrules').is_file())
+        for filename in ('AGENTS.md', 'CLAUDE.md'):
+            self.assertIn('ConKeeper Memory System', (self.project / filename).read_text())
 
 
 if __name__ == '__main__':

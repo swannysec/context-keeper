@@ -262,7 +262,8 @@ and /memory-search --sessions.
 **Privacy note:** Bash command summaries (first 80 characters) are recorded verbatim. These may contain sensitive data such as API keys, connection strings, or passwords passed as command arguments. Consider adding observation files to `.gitignore` if your project is version-controlled:
 
 ```gitignore
-$MEMORY_ROOT/sessions/*-observations.md
+.ai/memory/sessions/*-observations.md
+.claude/memory/sessions/*-observations.md
 ```
 
 ### sessions/YYYY-MM-DD-retro.md

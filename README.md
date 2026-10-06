@@ -277,7 +277,7 @@ The context preservation hooks require `jq` and `bc`. Install via your package m
 Memory files may contain project context that influences AI assistant behavior. For security guidance, see [SECURITY.md](SECURITY.md).
 
 Key recommendations:
-- Add `.ai/memory/` to `.gitignore` for shared repositories
+- Add the selected project memory root (`.ai/memory/` or legacy `.claude/memory/`) to `.gitignore` for shared repositories; ignore both if both exist
 - Review memory files when working on untrusted codebases
 - See SECURITY.md for prompt injection awareness
 

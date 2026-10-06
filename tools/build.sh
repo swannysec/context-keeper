@@ -117,6 +117,7 @@ build_universal() {
     mkdir -p "$pkg_dir"
     
     cp -r "${SCRIPT_DIR}/core" "$pkg_dir/"
+    cp -r "${SCRIPT_DIR}/platforms" "$pkg_dir/"
     mkdir -p "$pkg_dir/tools"
     cp "${SCRIPT_DIR}/tools/install.sh" "$pkg_dir/tools/"
     
@@ -132,6 +133,7 @@ This package contains the core ConKeeper memory system for use with any AI codin
 - `core/memory/schema.md` - Memory file format specification
 - `core/memory/templates/` - Template files for memory initialization
 - `core/workflows/` - Platform-agnostic workflow specifications
+- `platforms/` - Source assets for the installer's platform options
 - `tools/install.sh` - Interactive installer script
 
 ## Quick Start

@@ -6,7 +6,7 @@ ConKeeper stores project context in plain Markdown files. While this provides tr
 
 ## What NOT to Store in Memory Files
 
-**Never store these in `.claude/memory/` files:**
+**Never store these in memory files under either `.ai/memory/` or legacy `.claude/memory/`:**
 
 - API keys, tokens, or secrets
 - Passwords or credentials
@@ -20,32 +20,39 @@ ConKeeper stores project context in plain Markdown files. While this provides tr
 ### For Solo Projects
 
 If you're the only contributor:
-- Consider adding `.claude/memory/` to `.gitignore` for sensitive projects
+- Consider adding the selected project memory root to `.gitignore` for sensitive projects
 - Review memory contents before pushing to public repositories
 - Use environment variables for secrets, not memory files
 
 ### For Shared Repositories
 
 If others have access to the repository:
-- Always add `.claude/memory/` to `.gitignore`
+- Always add the selected project memory root to `.gitignore`; ignore both fixed roots if both exist
 - Use the `/memory-init` command and select "No" for git tracking
 - Keep architectural decisions generic (no internal URLs or credentials)
 
 ### For Public Repositories
 
 If the repository is public:
-- Never commit `.claude/memory/` directory
+- Never commit either `.ai/memory/` or `.claude/memory/`
 - Review all files before making a repository public
 - Consider if architectural details could aid attackers
 
 ## Memory File Locations
 
+Select existing `.ai/memory/`, otherwise existing `.claude/memory/`, otherwise `.ai/memory/` for initialization. Global selection follows the same rule independently under your home directory. Both roots means prefer `.ai`, warn, and leave legacy contents untouched. Git ignore files use literal patterns, not shell variables:
+
+```gitignore
+.ai/memory/
+.claude/memory/
+```
+
 | Location | Purpose | Risk Level |
 |----------|---------|------------|
-| `~/.claude/memory/` | Global preferences | Low (user home, not in repos) |
-| `.claude/memory/` | Project context | Medium (may be committed) |
-| `.claude/memory/decisions/` | ADRs | Medium (architecture details) |
-| `.claude/memory/sessions/` | Session history | Low (typically transient) |
+| `~/.ai/memory/` or `~/.claude/memory/` | Global preferences | Low (user home, not in repos) |
+| `.ai/memory/` or `.claude/memory/` | Project context | Medium (may be committed) |
+| Selected root's `decisions/` | ADRs | Medium (architecture details) |
+| Selected root's `sessions/` | Session history | Low (typically transient) |
 
 ## Prompt Injection Risks
 
@@ -53,7 +60,7 @@ ConKeeper stores project context in markdown files that are loaded into AI assis
 
 ### Risk Description
 
-Memory files (`.claude/memory/*.md`) could potentially contain malicious content designed to manipulate AI assistant behavior. This is an inherent risk in any system that persists AI context.
+Memory files under either fixed root could potentially contain malicious content designed to manipulate AI assistant behavior. This is an inherent risk in any system that persists AI context.
 
 **Example attack scenario:**
 1. An attacker gains write access to memory files (e.g., via compromised dependency, shared repo access)

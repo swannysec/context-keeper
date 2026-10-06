@@ -141,7 +141,7 @@ On confirmation:
 
 Write the sync timestamp:
 ```bash
-echo "$(date +%s)" > $MEMORY_ROOT/.last-sync
+echo "$(date +%s)" > "$MEMORY_ROOT/.last-sync"
 ```
 
 Write in both manual and auto-sync modes. Refuse to write through symlinks — if `$MEMORY_ROOT/.last-sync` is a symlink, skip this step and warn the user.
