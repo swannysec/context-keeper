@@ -1,6 +1,6 @@
-# Current behavior and design discrepancies
+# v1.4 baseline behavior and design discrepancies
 
-Inspected 2026-10-06. Local tracked HEAD and fetched `origin/main` both equal `564d419f0a1f3f38782ebf4d4cb5c04dd269d2f7` (v1.4.0). This isolated checkout preserves the original working copy untouched. Tests are recorded separately in [verification](verification.md).
+Inspected 2026-10-06 at bootstrap. At that time, tracked HEAD and fetched `origin/main` equaled `564d419f0a1f3f38782ebf4d4cb5c04dd269d2f7` (v1.4.0). The table below records that baseline, not Phase 2 behavior. Tests and subsequent changes are recorded in [verification](verification.md).
 
 ## Inspected code map
 

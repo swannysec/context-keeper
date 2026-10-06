@@ -7,10 +7,17 @@ triggers:
 
 # Memory Initialization
 
+## Memory root selection
+
+Resolve memory once per workflow, independently for project and global scopes: use existing `.ai/memory`, otherwise existing `.claude/memory`, otherwise select `.ai/memory` for authorized initialization. If both exist, use `.ai`, warn, and leave legacy memory untouched. Do not migrate or merge automatically.
+
+When shell access is available, set `MEMORY_ROOT` with `bash "<conkeeper-path>/tools/memory-root.sh"` and `GLOBAL_MEMORY_ROOT` with the same command plus `--global`, checking for errors before continuing. Otherwise apply the same fixed rules with file tools. Run from the project root; global paths are relative to the user's home. All paths below use the selected root, including config, queues, observations, decisions, sync markers and handoffs. Read-only operations must not create directories. Preserve private content and refuse writes through symlinked memory subdirectories/files.
+
+
 ## Pre-flight Checks
 
 1. Confirm working directory is a project root (has package.json, Cargo.toml, pyproject.toml, go.mod, or similar)
-2. Check if `.claude/memory/` already exists
+2. Check if `$MEMORY_ROOT/` already exists
    - If yes: Ask user if they want to reset or just review current memory
    - If no: Proceed with initialization
 
@@ -19,8 +26,8 @@ triggers:
 ### Step 1: Create Directory Structure
 
 ```bash
-mkdir -p .claude/memory/decisions
-mkdir -p .claude/memory/sessions
+mkdir -p "$MEMORY_ROOT/decisions"
+mkdir -p "$MEMORY_ROOT/sessions"
 ```
 
 ### Step 2: Gather Project Context
@@ -150,7 +157,7 @@ Ask user:
 > 3. **Standard** (~4000 tokens): Balanced for most projects (default)
 > 4. **Detailed** (~6000 tokens): Comprehensive context, rich handoffs
 
-Create `.claude/memory/.memory-config.md` with their choice:
+Create `$MEMORY_ROOT/.memory-config.md` with their choice:
 ```yaml
 ---
 token_budget: standard
@@ -166,7 +173,7 @@ Ask user:
 
 **If yes:**
 > Enter parent directories to search (comma-separated). Example: ~/zed, ~/work
-Write to `.claude/memory/.memory-config.md` (append to existing frontmatter):
+Write to `$MEMORY_ROOT/.memory-config.md` (append to existing frontmatter):
 ```yaml
 project_search_paths: ["~/zed", "~/work"]
 ```
@@ -179,13 +186,14 @@ project_search_paths: ["~/zed", "~/work"]
 ### Step 5: Git Handling
 
 Ask user:
-> Should `.claude/memory/` be tracked in git?
+> Should `$MEMORY_ROOT/` be tracked in git?
 > - Yes: Memory persists with repo (recommended for solo projects)
 > - No: Add to .gitignore (recommended for shared repos)
 
 If no, add to .gitignore (idempotent - won't duplicate if already present):
 ```bash
-grep -qxF '.claude/memory/' .gitignore 2>/dev/null || echo '.claude/memory/' >> .gitignore
+memory_ignore="${MEMORY_ROOT#"$(pwd -P)/"}/"
+grep -qxF "$memory_ignore" .gitignore 2>/dev/null || echo "$memory_ignore" >> .gitignore
 ```
 
 ### Step 6: Confirm

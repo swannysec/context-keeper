@@ -7,6 +7,13 @@ triggers:
 
 # Memory Insights — Session Trend Analysis
 
+## Memory root selection
+
+Resolve memory once per workflow, independently for project and global scopes: use existing `.ai/memory`, otherwise existing `.claude/memory`, otherwise select `.ai/memory` for authorized initialization. If both exist, use `.ai`, warn, and leave legacy memory untouched. Do not migrate or merge automatically.
+
+When shell access is available, set `MEMORY_ROOT` with `bash "<conkeeper-path>/tools/memory-root.sh"` and `GLOBAL_MEMORY_ROOT` with the same command plus `--global`, checking for errors before continuing. Otherwise apply the same fixed rules with file tools. Run from the project root; global paths are relative to the user's home. All paths below use the selected root, including config, queues, observations, decisions, sync markers and handoffs. Read-only operations must not create directories. Preserve private content and refuse writes through symlinked memory subdirectories/files.
+
+
 Read-only analytics over Claude Code facets data for friction trends, success patterns, and satisfaction signals.
 
 ## Data Source
@@ -80,6 +87,6 @@ Present proposed additions:
 >     <!-- @category: pattern -->
 > Route to friction.md? [y/n]
 
-On approval, write to `.claude/memory/friction.md`. If the file doesn't exist, create it with a `# Friction Patterns` header and `## Conventions` / `## Project-Specific` sections (same template as `/memory-init`).
+On approval, write to `$MEMORY_ROOT/friction.md`. If the file doesn't exist, create it with a `# Friction Patterns` header and `## Conventions` / `## Project-Specific` sections (same template as `/memory-init`).
 
 Cap total entries at ~15-20. If file exceeds cap after adding new entries, drop the least-recurrent entries (those without repeated evidence across multiple sessions).

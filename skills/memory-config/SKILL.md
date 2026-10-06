@@ -7,11 +7,18 @@ triggers:
 
 # Memory Configuration
 
+## Memory root selection
+
+Resolve memory once per workflow, independently for project and global scopes: use existing `.ai/memory`, otherwise existing `.claude/memory`, otherwise select `.ai/memory` for authorized initialization. If both exist, use `.ai`, warn, and leave legacy memory untouched. Do not migrate or merge automatically.
+
+When shell access is available, set `MEMORY_ROOT` with `bash "<conkeeper-path>/tools/memory-root.sh"` and `GLOBAL_MEMORY_ROOT` with the same command plus `--global`, checking for errors before continuing. Otherwise apply the same fixed rules with file tools. Run from the project root; global paths are relative to the user's home. All paths below use the selected root, including config, queues, observations, decisions, sync markers and handoffs. Read-only operations must not create directories. Preserve private content and refuse writes through symlinked memory subdirectories/files.
+
+
 View and modify ConKeeper configuration for the current project.
 
 ## Pre-flight Check
 
-1. Verify `.claude/memory/` exists
+1. Verify `$MEMORY_ROOT/` exists
    - If not: Inform user to run `/memory-init` first
 
 ## Configuration Options
@@ -46,7 +53,7 @@ View and modify ConKeeper configuration for the current project.
 
 ### Step 1: Read Current Config
 
-Check for `.claude/memory/.memory-config.md`:
+Check for `$MEMORY_ROOT/.memory-config.md`:
 - If exists: Read and display current settings
 - If not: Display defaults (standard preset)
 
@@ -73,7 +80,7 @@ Ask the user which setting they'd like to change, or whether they're done. Accep
 
 ### Step 4: Apply Changes
 
-Update or create `.claude/memory/.memory-config.md`:
+Update or create `$MEMORY_ROOT/.memory-config.md`:
 
 ```yaml
 ---

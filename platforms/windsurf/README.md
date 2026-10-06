@@ -1,5 +1,10 @@
 # ConKeeper for Windsurf
 
+## Memory roots
+
+New projects use `.ai/memory/`; existing legacy-only projects keep `.claude/memory/`. Global memory resolves independently between `~/.ai/memory/` and `~/.claude/memory/`. Both roots means prefer `.ai`, warn, and never merge. Paths shown below are new-project examples; substitute the selected legacy root when applicable. Use `bash <conkeeper-path>/tools/memory-root.sh` (or `--global`) to resolve without creating directories. All workflows use that root for settings, sessions, queues, decisions and handoffs. `AGENTS.md` is primary; the installer can also add the same instructions to `CLAUDE.md` as a compatibility fallback, preserving existing instructions.
+
+
 Setup instructions for using ConKeeper memory system with Windsurf IDE.
 
 ## Prerequisites
@@ -39,7 +44,7 @@ cat >> AGENTS.md << 'EOF'
 
 This project uses ConKeeper for persistent AI context management.
 
-**Memory Location:** `.claude/memory/`
+**Memory Location:** Use existing `.ai/memory/`, otherwise existing `.claude/memory/`, otherwise `.ai/memory/` for initialization. Apply the same rule independently under the home directory for global memory. If both roots exist, use `.ai`, warn, and leave legacy files untouched.
 
 **Available Workflows:**
 - **memory-init** - Initialize memory for this project
@@ -69,7 +74,7 @@ Cascade will read the `.windsurfrules` file and follow the inline instructions.
 
 ### Memory Location
 
-ConKeeper stores memory in `.claude/memory/` by default. This is cross-platform compatible with:
+ConKeeper defaults to `.ai/memory/` for new projects and retains `.claude/memory/` for legacy-only projects. This is cross-platform compatible with:
 - Claude Code (primary platform)
 - GitHub Copilot
 - Cursor

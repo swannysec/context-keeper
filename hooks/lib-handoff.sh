@@ -33,12 +33,15 @@ generate_handoff() {
     local cwd="$2"
     local usage_pct="$3"
     local handoff_ttl="$4"
+    local memory_root
+    . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib-memory-root.sh"
+    memory_root=$(resolve_memory_root "${cwd:-.}") || return 1
     local epoch
     epoch=$(date +%s)
 
     # Extract Current Focus from active-context.md
     local focus_summary="No active context available."
-    local active_ctx="${cwd:-.}/.claude/memory/active-context.md"
+    local active_ctx="$memory_root/active-context.md"
     if [ -f "$active_ctx" ] && [ ! -L "$active_ctx" ]; then
         local extracted
         extracted=$(awk '/^## Current Focus/{found=1; next} found && /^## /{exit} found{print}' "$active_ctx" 2>/dev/null | head -5)
@@ -83,7 +86,8 @@ generate_handoff() {
     fi
 
     # Write handoff file
-    local handoff_dir="${cwd:-.}/.claude/memory/.handoffs"
+    local handoff_dir="$memory_root/.handoffs"
+    memory_subdir_safe "$memory_root" "$handoff_dir" || return 1
     mkdir -p "$handoff_dir"
     chmod 700 "$handoff_dir" 2>/dev/null || true
     local handoff_file="$handoff_dir/.pending-handoff-${session_id}.md"

@@ -5,6 +5,13 @@ description: Generate a complete handoff prompt for seamless continuation in a n
 
 # Session Handoff
 
+## Memory root selection
+
+Resolve memory once per workflow, independently for project and global scopes: use existing `.ai/memory`, otherwise existing `.claude/memory`, otherwise select `.ai/memory` for authorized initialization. If both exist, use `.ai`, warn, and leave legacy memory untouched. Do not migrate or merge automatically.
+
+When shell access is available, set `MEMORY_ROOT` with `bash "<conkeeper-path>/tools/memory-root.sh"` and `GLOBAL_MEMORY_ROOT` with the same command plus `--global`, checking for errors before continuing. Otherwise apply the same fixed rules with file tools. Run from the project root; global paths are relative to the user's home. All paths below use the selected root, including config, queues, observations, decisions, sync markers and handoffs. Read-only operations must not create directories. Preserve private content and refuse writes through symlinked memory subdirectories/files.
+
+
 Generate a complete handoff package for seamless session continuation.
 
 ## When to Use
@@ -18,7 +25,7 @@ Generate a complete handoff package for seamless session continuation.
 
 ### Step 0: Check Token Budget
 
-Read `.claude/memory/.memory-config.md` for token budget (if exists):
+Read `$MEMORY_ROOT/.memory-config.md` for token budget (if exists):
 - `economy`: Session summary ~200-400 tokens (brief, 2-3 sentences)
 - `light`: Session summary ~400-700 tokens (concise, 3-5 sentences)
 - `standard`: Session summary ~600-1000 tokens (default, 5-8 sentences)
@@ -113,7 +120,7 @@ I'm continuing work on [project-name] from a previous session.
 - [Question or blocker]
 
 ## Context to Load
-Project memory is at: .claude/memory/
+Project memory is at: $MEMORY_ROOT/
 Key files to review: [list files]
 
 Please load the project memory and continue with [next task].

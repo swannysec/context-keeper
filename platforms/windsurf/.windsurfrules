@@ -1,12 +1,19 @@
 # ConKeeper Memory System Rules
 
+## Memory root selection
+
+Resolve memory once per workflow, independently for project and global scopes: use existing `.ai/memory`, otherwise existing `.claude/memory`, otherwise select `.ai/memory` for authorized initialization. If both exist, use `.ai`, warn, and leave legacy memory untouched. Do not migrate or merge automatically.
+
+When shell access is available, set `MEMORY_ROOT` with `bash "<conkeeper-path>/tools/memory-root.sh"` and `GLOBAL_MEMORY_ROOT` with the same command plus `--global`, checking for errors before continuing. Otherwise apply the same fixed rules with file tools. Run from the project root; global paths are relative to the user's home. All paths below use the selected root, including config, queues, observations, decisions, sync markers and handoffs. Read-only operations must not create directories. Preserve private content and refuse writes through symlinked memory subdirectories/files.
+
+
 This project uses the ConKeeper memory system for persistent AI context management.
 
 ## Memory Location
 
-Memory is stored in `.claude/memory/` with the following structure:
+Memory is stored in `$MEMORY_ROOT/` with the following structure:
 ```
-.claude/memory/
+$MEMORY_ROOT/
 ├── active-context.md    # Current session focus
 ├── product-context.md   # Project overview
 ├── progress.md          # Task tracking
@@ -26,12 +33,12 @@ Memory is stored in `.claude/memory/` with the following structure:
 
 1. **Check Prerequisites**
    - Verify we're in a project root (look for package.json, Cargo.toml, etc.)
-   - Check if `.claude/memory/` already exists
+   - Check if `$MEMORY_ROOT/` already exists
 
 2. **Create Directory Structure**
    ```bash
-   mkdir -p .claude/memory/decisions
-   mkdir -p .claude/memory/sessions
+   mkdir -p "$MEMORY_ROOT/decisions"
+   mkdir -p "$MEMORY_ROOT/sessions"
    ```
 
 3. **Gather Project Context**
@@ -79,7 +86,7 @@ Memory is stored in `.claude/memory/` with the following structure:
 
 5. **Git Handling**
    Ask if memory should be tracked in git.
-   If no: `echo '.claude/memory/' >> .gitignore`
+   If no: `echo "${MEMORY_ROOT#"$(pwd -P)/"}/" >> .gitignore`
 
 6. **Confirm completion with summary**
 
@@ -198,7 +205,7 @@ Memory is stored in `.claude/memory/` with the following structure:
    - [ ] [Next task]
    
    ## Context to Load
-   Memory: .claude/memory/
+   Memory: $MEMORY_ROOT/
    
    Please continue with [next task].
    ```
@@ -215,7 +222,7 @@ Memory is stored in `.claude/memory/` with the following structure:
 
 1. **Parse Search Request**
    Extract the query and optional flags:
-   - `--global` — include `~/.claude/memory/`
+   - `--global` — include `$GLOBAL_MEMORY_ROOT/`
    - `--sessions` — include session files (last 30 days)
    - `--category <name>` — filter to entries with matching category tag
    - `--cross-project` — search across configured project directories

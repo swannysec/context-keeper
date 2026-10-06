@@ -1,5 +1,10 @@
 # ConKeeper for Zed
 
+## Memory roots
+
+New projects use `.ai/memory/`; existing legacy-only projects keep `.claude/memory/`. Global memory resolves independently between `~/.ai/memory/` and `~/.claude/memory/`. Both roots means prefer `.ai`, warn, and never merge. Paths shown below are new-project examples; substitute the selected legacy root when applicable. Use `bash <conkeeper-path>/tools/memory-root.sh` (or `--global`) to resolve without creating directories. All workflows use that root for settings, sessions, queues, decisions and handoffs. `AGENTS.md` is primary; the installer can also add the same instructions to `CLAUDE.md` as a compatibility fallback, preserving existing instructions.
+
+
 Setup instructions for using ConKeeper memory system with Zed Editor.
 
 ## Prerequisites
@@ -29,7 +34,7 @@ cat >> AGENTS.md << 'EOF'
 
 This project uses ConKeeper for persistent AI context management.
 
-**Memory Location:** `.claude/memory/`
+**Memory Location:** Use existing `.ai/memory/`, otherwise existing `.claude/memory/`, otherwise `.ai/memory/` for initialization. Apply the same rule independently under the home directory for global memory. If both roots exist, use `.ai`, warn, and leave legacy files untouched.
 
 **Available Workflows:**
 - **memory-init** - Initialize memory (see full workflow below)
@@ -40,7 +45,7 @@ This project uses ConKeeper for persistent AI context management.
 - **memory-insights** - Session friction trends and success pattern analysis
 
 ### memory-init Workflow
-1. Create `.claude/memory/decisions/` and `.claude/memory/sessions/`
+1. Create `decisions/` and `sessions/` under the selected memory root
 2. Gather project context (purpose, tech stack, current focus)
 3. Create product-context.md, active-context.md, progress.md
 4. Ask about git tracking preference
@@ -67,7 +72,7 @@ If you use `.rules` instead of AGENTS.md, add to `.rules`:
 
 ```
 # ConKeeper Memory System
-Memory location: .claude/memory/
+Memory location: Use existing `.ai/memory/`, otherwise existing `.claude/memory/`, otherwise `.ai/memory/` for initialization. If both exist, use `.ai`, warn, and never merge. All workflow paths refer to the selected root.
 Workflows: memory-init, memory-sync, session-handoff
 When asked to use these workflows, create the appropriate memory files.
 ```
@@ -95,12 +100,12 @@ Ask the AI to follow workflows:
 ### With Inline Assist
 
 Reference memory when needed:
-- "Check .claude/memory/active-context.md for current focus"
+- "Check .ai/memory/active-context.md for current focus"
 - "Update progress.md with completed tasks"
 
 ## Memory Location
 
-ConKeeper stores memory in `.claude/memory/` by default. This is cross-platform compatible with:
+ConKeeper defaults to `.ai/memory/` for new projects and retains `.claude/memory/` for legacy-only projects. This is cross-platform compatible with:
 - Claude Code (primary platform)
 - GitHub Copilot
 - Cursor
@@ -124,7 +129,7 @@ The AI should reference ConKeeper workflows from your rules.
 
 **AI doesn't find memory:**
 - Memory must be initialized first
-- Check `.claude/memory/` directory exists
+- Check `.ai/memory/` directory exists
 - Verify file permissions
 
 ## Validation Status

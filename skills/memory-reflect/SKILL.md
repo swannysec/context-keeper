@@ -7,15 +7,22 @@ triggers:
 
 # Memory Reflect — Session Retrospection
 
+## Memory root selection
+
+Resolve memory once per workflow, independently for project and global scopes: use existing `.ai/memory`, otherwise existing `.claude/memory`, otherwise select `.ai/memory` for authorized initialization. If both exist, use `.ai`, warn, and leave legacy memory untouched. Do not migrate or merge automatically.
+
+When shell access is available, set `MEMORY_ROOT` with `bash "<conkeeper-path>/tools/memory-root.sh"` and `GLOBAL_MEMORY_ROOT` with the same command plus `--global`, checking for errors before continuing. Otherwise apply the same fixed rules with file tools. Run from the project root; global paths are relative to the user's home. All paths below use the selected root, including config, queues, observations, decisions, sync markers and handoffs. Read-only operations must not create directories. Preserve private content and refuse writes through symlinked memory subdirectories/files.
+
+
 6-phase After Action Review (AAR) workflow for extracting actionable improvements from the current session.
 
 ## Phase 1: Gather Evidence
 
 Read the following data sources (skip any that don't exist):
-1. `.claude/memory/corrections-queue.md` — unprocessed correction/friction items
-2. Current session's observation file: `.claude/memory/sessions/YYYY-MM-DD-observations.md`
-3. Current session summary (if /memory-sync has run): most recent file in `.claude/memory/sessions/`
-4. `.claude/memory/active-context.md` — current project state
+1. `$MEMORY_ROOT/corrections-queue.md` — unprocessed correction/friction items
+2. Current session's observation file: `$MEMORY_ROOT/sessions/YYYY-MM-DD-observations.md`
+3. Current session summary (if /memory-sync has run): most recent file in `$MEMORY_ROOT/sessions/`
+4. `$MEMORY_ROOT/active-context.md` — current project state
 5. **Claude Code facets data** (if available): Find the facet JSON file matching the
    current session ID in `~/.claude/usage-data/facets/`. Extract:
    - `friction_counts` — pre-classified friction events by type
@@ -68,12 +75,12 @@ For LIGHTWEIGHT sessions: Auto-select PROCESS scope, skip user confirmation, and
      For any friction type not listed above, map to the closest ConKeeper category
      based on the friction_detail narrative, defaulting to `efficiency` if unclear.
 4. Cross-reference with existing knowledge:
-   - Read `.claude/memory/patterns.md` — don't re-discover known patterns
-   - Read `.claude/memory/decisions/` — don't re-recommend existing decisions
+   - Read `$MEMORY_ROOT/patterns.md` — don't re-discover known patterns
+   - Read `$MEMORY_ROOT/decisions/` — don't re-recommend existing decisions
    - Use `/memory-search` to check if similar issues were flagged in past session retros
 5. Identify net-new insights vs. reinforcements of existing knowledge
 6. **Friction Pattern Check:**
-   If `.claude/memory/friction.md` exists:
+   If `$MEMORY_ROOT/friction.md` exists:
    - Read friction.md conventions
    - Check if this session triggered any known friction patterns
    - If yes: note "Known friction pattern triggered: [convention]. Was the convention followed? If not, consider stronger wording or more prominent placement."
@@ -116,7 +123,7 @@ Route approved items to the most appropriate memory file (patterns.md, decisions
 
 ## Phase 6: Write Retrospective
 
-Create retrospective file at: `.claude/memory/sessions/YYYY-MM-DD-retro.md`
+Create retrospective file at: `$MEMORY_ROOT/sessions/YYYY-MM-DD-retro.md`
 
 Format:
 ```markdown

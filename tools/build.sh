@@ -117,7 +117,9 @@ build_universal() {
     mkdir -p "$pkg_dir"
     
     cp -r "${SCRIPT_DIR}/core" "$pkg_dir/"
-    cp "${SCRIPT_DIR}/tools/install.sh" "$pkg_dir/"
+    cp -r "${SCRIPT_DIR}/platforms" "$pkg_dir/"
+    mkdir -p "$pkg_dir/tools"
+    cp "${SCRIPT_DIR}/tools/install.sh" "$pkg_dir/tools/"
     
     # Create simple README
     cat > "${pkg_dir}/README.md" << 'EOF'
@@ -131,7 +133,8 @@ This package contains the core ConKeeper memory system for use with any AI codin
 - `core/memory/schema.md` - Memory file format specification
 - `core/memory/templates/` - Template files for memory initialization
 - `core/workflows/` - Platform-agnostic workflow specifications
-- `install.sh` - Interactive installer script
+- `platforms/` - Source assets for the installer's platform options
+- `tools/install.sh` - Interactive installer script
 
 ## Quick Start
 
@@ -164,6 +167,11 @@ main() {
     build_windsurf
     build_zed
     build_universal
+    for package in "$BUILD_DIR"/*; do
+        mkdir -p "$package/tools" "$package/hooks"
+        cp "$SCRIPT_DIR/tools/memory-root.sh" "$SCRIPT_DIR/tools/memory-search.sh" "$package/tools/"
+        cp "$SCRIPT_DIR/hooks/lib-memory-root.sh" "$SCRIPT_DIR/hooks/lib-config.sh" "$SCRIPT_DIR/hooks/lib-privacy.sh" "$package/hooks/"
+    done
     
     echo ""
     echo -e "${GREEN}╔═══════════════════════════════════════════════════╗${NC}"

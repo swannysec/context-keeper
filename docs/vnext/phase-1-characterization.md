@@ -2,6 +2,8 @@
 
 Date: 2026-10-06. Source: `docs/vnext-bootstrap`, revision `4adf4535563d059216e0201ed06bddb11b7219a6` (v1.4.0 plus the documentation bootstrap). Scope: characterize current behavior and add tests; no production code, resolver, schema, migration, or adapter behavior changed. Phase 2 has not started.
 
+Historical record: these statements describe Phase 1. Subsequent Phase 2 results are in [verification](verification.md). The user removed custom-root configuration from scope on 2026-10-06; the original references to implementing that channel below are superseded by the fixed-root [compatibility contract](compatibility.md).
+
 ## Reproduction and results
 
 Run from the repository root on macOS, with `/bin/bash` 3.2.57 and BSD userland. Dependencies used: system Python 3, jq, bc, Git, and Homebrew ripgrep. Each baseline suite received an isolated child-process HOME and TMPDIR; no developer global or native memory was used. The new suite creates and cleans its own temporary fixtures, including paths with spaces, native-memory sentinels, and scratch build sources.

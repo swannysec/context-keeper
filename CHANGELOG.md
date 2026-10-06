@@ -7,10 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [1.5.0] — Pending release
+
+### Changed
+
+- Resolve project and global memory independently: existing `.ai/memory`, otherwise legacy `.claude/memory`, otherwise a new `.ai/memory` target. Warn when both roots exist without migrating or merging. Hooks, search, feature settings and workflow copies use the selected root; custom-root configuration is out of scope.
+- Add a read-only root diagnostic and include root/search tools and required libraries in distributions. The installer includes memory-search and offers AGENTS.md instructions with a CLAUDE.md compatibility fallback, preserving existing instructions.
+- Reject unsafe memory roots and symlinked sessions/handoff subdirectories before writes or cleanup.
+
 ### Documentation
 
-- Add canonical vNext specifications, compatibility-first implementation plan, current-behavior evidence, and repository agent guidance. No runtime behavior changes.
-- Record Phase 1 characterization and plugin QA limits; add focused regression coverage for current roots, configuration, privacy, native-state preservation, installers and packaging. Stop before resolver implementation.
+- Add canonical vNext specifications, compatibility-first implementation plan, baseline behavior evidence, and repository agent guidance.
+- Record Phase 1 characterization, Phase 2 verification and plugin QA limits; add focused regression coverage for roots, configuration, privacy, native-state preservation, installers and packaging.
 
 ## [1.4.0] — 2026-08-10
 

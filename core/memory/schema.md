@@ -8,7 +8,7 @@ This document defines the standard format for ConKeeper memory files. Implementa
 ## Directory Structure
 
 ```
-.claude/memory/          # or .ai/memory/ (future standard)
+.ai/memory/              # legacy-only projects retain .claude/memory/
 ├── active-context.md    # Current session focus and state
 ├── product-context.md   # Project overview and architecture
 ├── progress.md          # Task tracking
@@ -32,18 +32,18 @@ Use `/memory-search <query>` to find entries across memory files. Supports `--gl
 
 ## Global Memory (Optional)
 
-Global memory at `~/.claude/memory/` stores cross-project preferences. This is outside the scope of this schema but may include:
+Global memory at the selected `~/.ai/memory/` or legacy `~/.claude/memory/` stores cross-project preferences. This is outside the scope of this schema but may include:
 - `preferences.md` - Tool and workflow preferences
 - `patterns.md` - Reusable patterns across projects
 - `glossary.md` - Personal terminology
 
-Global memory is platform-specific (Claude Code) and not portable.
+Global operating memory is independent of host-native memory.
 
 ## Memory Path Resolution
 
-Implementations should check for memory in this order:
-1. `.claude/memory/` (current standard)
-2. `.ai/memory/` (future cross-platform standard)
+Resolve memory once per workflow, independently for project and global scopes: use existing `.ai/memory`, otherwise existing `.claude/memory`, otherwise select `.ai/memory` for authorized initialization. If both exist, use `.ai`, warn, and leave legacy memory untouched. Do not migrate or merge automatically.
+
+When shell access is available, set `MEMORY_ROOT` with `bash "<conkeeper-path>/tools/memory-root.sh"` and `GLOBAL_MEMORY_ROOT` with the same command plus `--global`, checking for errors before continuing. Otherwise apply the same fixed rules with file tools. Run from the project root; global paths are relative to the user's home. All paths below use the selected root, including config, queues, observations, decisions, sync markers and handoffs. Read-only operations must not create directories. Preserve private content and refuse writes through symlinked memory subdirectories/files.
 
 ## File Formats
 
@@ -262,6 +262,7 @@ and /memory-search --sessions.
 **Privacy note:** Bash command summaries (first 80 characters) are recorded verbatim. These may contain sensitive data such as API keys, connection strings, or passwords passed as command arguments. Consider adding observation files to `.gitignore` if your project is version-controlled:
 
 ```gitignore
+.ai/memory/sessions/*-observations.md
 .claude/memory/sessions/*-observations.md
 ```
 
@@ -321,7 +322,7 @@ If the Claude Code runtime does not provide this field, detection is silently sk
 
 **Format:** Single line containing a unix epoch timestamp (e.g., `1707955200`).
 
-**Location:** `.claude/memory/.last-sync`
+**Location:** `$MEMORY_ROOT/.last-sync`
 
 **Writers:** `/memory-sync` skill (Step 4.5) — written in both manual and auto-sync modes. On first session with v1.2.0+, the session-start hook creates the file with the current timestamp.
 
@@ -363,7 +364,7 @@ If the Claude Code runtime does not provide this field, detection is silently sk
 
 ### .memory-config.md
 
-**Purpose:** Project-specific ConKeeper configuration. Placed in `.claude/memory/`.
+**Purpose:** Project-specific ConKeeper configuration. Placed in the selected `$MEMORY_ROOT/`.
 
 ```yaml
 ---
@@ -525,10 +526,10 @@ Tags are also plain text inside HTML comments, so standard search tools find the
 
 ```bash
 # Find all decisions across memory files
-rg '@category: decision' .claude/memory/
+rg '@category: decision' "$MEMORY_ROOT/"
 
 # Find freeform tags
-rg '@tag: payments' .claude/memory/
+rg '@tag: payments' "$MEMORY_ROOT/"
 ```
 
 ## Privacy Tags

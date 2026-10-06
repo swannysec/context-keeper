@@ -21,57 +21,22 @@ sanitize_context_content() {
     printf '%s' "$1" | sed 's|</conkeeper-|<\\/conkeeper-|g'
 }
 
-# Check for memory directories
-# NOTE: PROJECT_MEMORY uses relative path - this script assumes CWD is the project root.
-# Claude Code invokes hooks from the project directory, so this is the expected behavior.
-# (HIGH-3: Documented CWD assumption)
-GLOBAL_MEMORY="$HOME/.claude/memory"
-PROJECT_MEMORY=".claude/memory"
-
-# Validate directory exists and resolve symlinks safely
-# Returns 0 if valid directory, 1 otherwise
-validate_memory_dir() {
-    local dir="$1"
-    local expected_parent="$2"
-
-    # Check if path exists and is a directory (follows symlinks)
-    if [ ! -d "$dir" ]; then
-        return 1
-    fi
-
-    # If it's a symlink, resolve and validate the target
-    if [ -L "$dir" ]; then
-        local resolved
-        # Use readlink -f if available, otherwise basic check
-        if command -v readlink &>/dev/null; then
-            resolved=$(readlink -f "$dir" 2>/dev/null) || return 1
-            # Ensure resolved path is under expected parent (prevent symlink escape)
-            # Use path-boundary check: require trailing / or exact match
-            case "$resolved" in
-                "$expected_parent"/*|"$expected_parent") return 0 ;;
-                *) return 1 ;;  # Symlink points outside expected location
-            esac
-        fi
-    fi
-
-    return 0
-}
-
-has_global=false
-has_project=false
-
-validate_memory_dir "$GLOBAL_MEMORY" "$HOME" && has_global=true
-validate_memory_dir "$PROJECT_MEMORY" "$PWD" && has_project=true
-
-# --- Source shared config library ---
+# Resolve from the project-root CWD and HOME independently.
 SCRIPT_DIR_SS="$(cd "$(dirname "$0")" && pwd)"
+. "$SCRIPT_DIR_SS/lib-memory-root.sh"
 . "$SCRIPT_DIR_SS/lib-config.sh"
+PROJECT_MEMORY=$(resolve_memory_root "$PWD") || exit 0
+GLOBAL_MEMORY=$(resolve_memory_root "$HOME") || GLOBAL_MEMORY=""
+has_project=false
+has_global=false
+[ -d "$PROJECT_MEMORY" ] && has_project=true
+[ -d "$GLOBAL_MEMORY" ] && has_global=true
 
 # --- Read configuration ---
 token_budget="standard"
 staleness_commits=5
 if [ "$has_project" = true ]; then
-    if extract_frontmatter ".claude/memory/.memory-config.md"; then
+    if extract_frontmatter "$PROJECT_MEMORY/.memory-config.md"; then
         token_budget=$(parse_yaml_str "token_budget" "standard")
         # Allowlist validation
         case "$token_budget" in
@@ -83,8 +48,8 @@ if [ "$has_project" = true ]; then
 fi
 
 # Create observations file for this session
-if [ "$has_project" = true ]; then
-    obs_dir=".claude/memory/sessions"
+if [ "$has_project" = true ] && memory_subdir_safe "$PROJECT_MEMORY" "$PROJECT_MEMORY/sessions"; then
+    obs_dir="$PROJECT_MEMORY/sessions"
     obs_file="$obs_dir/$(date +%Y-%m-%d)-observations.md"
     mkdir -p "$obs_dir"
     # Security: refuse to write through symlinks
@@ -98,7 +63,7 @@ fi
 additional_context=""
 
 if [ "$has_project" = true ]; then
-    LAST_SYNC_FILE=".claude/memory/.last-sync"
+    LAST_SYNC_FILE="$PROJECT_MEMORY/.last-sync"
     MEMORY_FILES="active-context.md progress.md patterns.md glossary.md product-context.md friction.md"
     FLAG_DIR="${TMPDIR:-/tmp}/conkeeper"
     (umask 077; mkdir -p "$FLAG_DIR")
@@ -131,7 +96,7 @@ if [ "$has_project" = true ]; then
         # Only run health check if git is available and we're in a repo
         if [ "$in_git_repo" = true ]; then
             for mfile in $MEMORY_FILES; do
-                mpath=".claude/memory/$mfile"
+                mpath="$PROJECT_MEMORY/$mfile"
                 if [ -f "$mpath" ] && [ ! -L "$mpath" ]; then
                     # Get mtime (BSD stat)
                     file_mtime=$(stat -f %m "$mpath" 2>/dev/null) || continue
@@ -208,7 +173,7 @@ Before proceeding with the user's task, run /memory-sync to refresh stale memory
             # Memory file changes since last sync
             changed_files=""
             for mfile in $MEMORY_FILES; do
-                mpath=".claude/memory/$mfile"
+                mpath="$PROJECT_MEMORY/$mfile"
                 if [ -f "$mpath" ] && [ ! -L "$mpath" ]; then
                     file_mtime=$(stat -f %m "$mpath" 2>/dev/null) || continue
                     if [ "$file_mtime" -gt "$last_sync_epoch" ]; then
@@ -222,8 +187,8 @@ Before proceeding with the user's task, run /memory-sync to refresh stale memory
             done
 
             # Check decisions/ for new/modified ADRs
-            if [ -d ".claude/memory/decisions" ]; then
-                for adr in .claude/memory/decisions/*.md; do
+            if [ -d "$PROJECT_MEMORY/decisions" ] && memory_subdir_safe "$PROJECT_MEMORY" "$PROJECT_MEMORY/decisions"; then
+                for adr in "$PROJECT_MEMORY"/decisions/*.md; do
                     [ -f "$adr" ] || continue
                     [ -L "$adr" ] && continue
                     adr_name=$(basename "$adr")
@@ -267,7 +232,7 @@ fi
 
 # --- Friction-Aware Loading (Phase E) ---
 if [ "$has_project" = true ] && [ "$token_budget" != "economy" ]; then
-    friction_file=".claude/memory/friction.md"
+    friction_file="$PROJECT_MEMORY/friction.md"
     if [ -f "$friction_file" ] && [ ! -L "$friction_file" ]; then
         friction_content=""
         case "$token_budget" in
@@ -293,8 +258,8 @@ fi
 
 # --- Handoff Resume Detection ---
 # NOT gated by token budget — continuation state always takes priority.
-handoff_dir="${PWD}/.claude/memory/.handoffs"
-if [ -d "$handoff_dir" ]; then
+handoff_dir="$PROJECT_MEMORY/.handoffs"
+if [ -d "$handoff_dir" ] && memory_subdir_safe "$PROJECT_MEMORY" "$handoff_dir"; then
     # Find most recent valid pending handoff
     latest_handoff=""
     latest_epoch=0
@@ -359,8 +324,8 @@ context=""
 if [ "$has_global" = true ] || [ "$has_project" = true ]; then
     context="<memory-system-active>
 Memory system detected.
-- Global memory: $([ "$has_global" = true ] && echo "\$HOME/.claude/memory" || echo "not configured")
-- Project memory: $([ "$has_project" = true ] && echo ".claude/memory" || echo "not configured")
+- Global memory: $([ "$has_global" = true ] && echo "$GLOBAL_MEMORY" || echo "not configured")
+- Project memory: $([ "$has_project" = true ] && echo "$PROJECT_MEMORY" || echo "not configured")
 
 For non-trivial tasks, load relevant memory before starting work:
 - Read product-context.md and active-context.md for project context
