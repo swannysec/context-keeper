@@ -4,6 +4,10 @@ A file-based agent memory system for AI coding assistants that provides structur
 
 **Multi-Platform Support:** ConKeeper works with Claude Code, GitHub Copilot, OpenAI Codex, Cursor, Windsurf, and Zed.
 
+## vNext planning
+
+The [vNext specifications and compatibility-first plan](docs/vnext/overview.md) describe intended portable memory roots and optional Knowledge Workspaces. They are planning documents; the current release behavior below remains unchanged. [Phase 1 characterization](docs/vnext/phase-1-characterization.md) records regression coverage and the remaining compatibility gates.
+
 ## Overview
 
 ConKeeper replaces database-backed context management with simple, version-controllable Markdown files. It provides:

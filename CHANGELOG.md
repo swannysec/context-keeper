@@ -5,6 +5,13 @@ All notable changes to ConKeeper will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Documentation
+
+- Add canonical vNext specifications, compatibility-first implementation plan, current-behavior evidence, and repository agent guidance. No runtime behavior changes.
+- Record Phase 1 characterization and plugin QA limits; add focused regression coverage for current roots, configuration, privacy, native-state preservation, installers and packaging. Stop before resolver implementation.
+
 ## [1.4.0] — 2026-08-10
 
 ### Fixed
