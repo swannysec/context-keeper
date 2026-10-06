@@ -33,9 +33,15 @@ Codex CLI 0.144.5 completed two isolated runs in a project with spaces, a synthe
 
 The first run exposed missing native memory-config discovery, although the agent used the shared workflow successfully. The adapter was added before the second run, which exercised native memory-config and memory-search. Evidence is in `/tmp/conkeeper-live-hosts-zk88shss/codex/`. Scratch authentication state was removed after testing. These runs verify the exercised behavior, not every possible model response; reject/defer/rename/conflict semantics are documented instructions rather than independently exercised host scenarios.
 
+## Live Claude exercise
+
+After the user explicitly authorized headless Claude verification, Claude Code 2.1.292 completed the scratch init/config/sync/search/handoff exercise with `claude -p`. Native authentication was API-key based, not the OAuth record initially expected. Its existing locally configured key was passed only through the child process environment; no credential value appeared in command text or shell history. Captured output was redacted in memory before retention, and a scan of scratch files found no credential copies. No credentials were copied into scratch settings or committed.
+
+Direct artifact checks confirmed inherited global configuration with a path containing spaces, missing-file initialization without resetting legacy content, the exact approved narrower claim with a stable UUID/citation/verbatim quotation, a separate pending backoff proposal, quoted pending handoff, and project-only `knowledge_workspace: false`. Global configuration retained its SHA-256 hash; legacy sentinel text and patterns, the native skill sentinel and the created durable notes remained intact. No project `.ai/memory` was created. The process exited zero without an error result. Sanitized evidence is in `/tmp/conkeeper-live-hosts-zk88shss/claude/`. This verifies the exercised headless workflow, not every review action or all Claude interfaces.
+
 ## Host limits and source research
 
-Claude Code 2.1.292 was located, but its isolated configuration reported no login. Automatic approval review rejected reading its existing OAuth credential from macOS Keychain because credential extraction was not explicitly authorized. That action did not execute. No alternate credential route was attempted. Claude live verification remains pending user authorization or another explicitly authorized isolated login.
+The earlier isolated Claude login check failed, and automatic approval review initially rejected Keychain credential extraction without explicit authorization. That rejected action did not execute. The user subsequently authorized headless verification with credentials kept local and out of logs, enabling the successful run above. Other hosts still require their own actual workflow evidence.
 
 Antigravity, Delta, Hermes and Zed GUI applications were found locally. Their complete isolated workflows were not exercised. No runnable Copilot, Cursor, Windsurf or Pi CLI was discovered in the inspected PATH. Installed applications, source documentation and package fixtures do not establish successful host workflows.
 
