@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [1.6.0] — 2026-10-06
+
 ### Added
 
 - Optional durable knowledge through existing skills and Markdown/file tools: global workspace inheritance, project override/disable, flat Obsidian-compatible note templates, stable identity, and human-reviewed additions/changes with citation/provenance and verbatim source excerpts. Pending work stays in existing project session/handoff records when the store is unavailable; auto-sync cannot approve durable promotion.
@@ -15,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Current Codex installation uses `.agents/skills/`, preserving native user content and retaining a legacy `.codex/skills/` distribution copy. All distributions include shared workflows and templates. No manifest, new runtime dependency, migration or external export is introduced.
 
-## [1.5.0] — Pending release
+## [1.5.0] — 2026-10-06
 
 ### Changed
 
